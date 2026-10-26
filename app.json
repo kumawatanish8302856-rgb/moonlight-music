@@ -40,7 +40,6 @@
         }
       ],
       "expo-audio",
-      "./plugins/withAndroidAudioTrackControls",
       "expo-asset"
     ],
     "experiments": {
