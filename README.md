@@ -16,6 +16,16 @@ MOONLIGHT is an [Expo](https://expo.dev) music app. Its launcher icon, in-app ma
    npx expo start
    ```
 
+## Android media controls
+
+The Android media notification includes previous/next track controls and stops when the
+app is dismissed from Recents. These native changes require a new development build; they
+are not available in Expo Go.
+
+```bash
+npx eas-cli@latest build --profile development --platform android
+```
+
 ## Profile data
 
 On first launch, enter a name, date of birth, and phone number. This profile is saved only

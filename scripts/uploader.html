@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moonlight Mashup – Song Uploader</title>
+<style>
+  :root {
+    --night: #08060f;
+    --night-soft: #120d22;
+    --panel: #1a1430;
+    --panel-border: rgba(167, 139, 250, 0.2);
+    --line: #2d224d;
+    --text: #f5f3ff;
+    --muted: #a89fc7;
+    --violet: #8b5cf6;
+    --violet-soft: #a78bfa;
+    --accent: #f0abfc;
+    --moon: #fef3c7;
+    --glow: rgba(139, 92, 246, 0.45);
+    --glow-strong: rgba(192, 38, 211, 0.35);
+    --ok: #4ade80;
+    --err: #f87171;
+    --card-bg: rgba(26, 20, 48, 0.75);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: var(--night);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    background-image:
+      radial-gradient(55vmax 45vmax at 85% -10%, #3b2478 0%, transparent 60%),
+      radial-gradient(40vmax 40vmax at -10% 40%, rgba(192, 38, 211, 0.15) 0%, transparent 50%),
+      radial-gradient(60vmax 60vmax at 50% 110%, #1a103c 0%, transparent 70%);
+    background-attachment: fixed;
+    padding-bottom: 60px;
+  }
+
+  .wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 32px 20px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+    position: relative;
+  }
+
+  .moon-wrap {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 14px;
+  }
+
+  .moon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #ffffff 0%, #fef3c7 35%, var(--violet-soft) 70%, var(--violet) 100%);
+    box-shadow: 0 0 45px 12px rgba(139, 92, 246, 0.5), 0 0 20px 4px rgba(254, 243, 199, 0.4);
+    animation: pulse 4s ease-in-out infinite alternate;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(0.98); box-shadow: 0 0 35px 8px rgba(139, 92, 246, 0.4); }
+    100% { transform: scale(1.02); box-shadow: 0 0 55px 16px rgba(139, 92, 246, 0.65), 0 0 25px 6px rgba(254, 243, 199, 0.5); }
+  }
+
+  h1 {
+    font-size: 2.1rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #ffffff 30%, var(--violet-soft) 80%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+
+  .sub {
+    color: var(--muted);
+    font-size: 0.95rem;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .drive-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 6px 14px;
+    background: rgba(139, 92, 246, 0.12);
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    color: var(--violet-soft);
+  }
+
+  .drive-pill .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 8px var(--ok);
+  }
+
+  /* Card */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 26px;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+    margin-bottom: 24px;
+  }
+
+  .card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-title svg {
+    color: var(--violet-soft);
+  }
+
+  /* Fields */
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 580px) {
+    .form-row { grid-template-columns: 1fr; }
+  }
+
+  label.field {
+    display: block;
+    margin-bottom: 18px;
+  }
+
+  .field-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .field-hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 13px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--night-soft);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+  }
+
+  input[type="text"]:focus {
+    outline: none;
+    border-color: var(--violet);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+    background: #17112d;
+  }
+
+  input[type="text"]::placeholder {
+    color: #635882;
+  }
+
+  /* Mood / Tag selector */
+  .tags-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tags-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border-radius: 12px;
+    background: var(--night-soft);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.18s ease;
+  }
+
+  .tag-chip:hover {
+    border-color: var(--violet-soft);
+    color: var(--text);
+    transform: translateY(-1px);
+  }
+
+  .tag-chip.active {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.35), rgba(192, 38, 211, 0.35));
+    border-color: var(--violet-soft);
+    color: #ffffff;
+    box-shadow: 0 0 16px rgba(139, 92, 246, 0.4);
+  }
+
+  .tag-chip .emoji {
+    font-size: 0.95rem;
+  }
+
+  /* File Dropzones */
+  .drop {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border: 1.5px dashed var(--line);
+    border-radius: 18px;
+    background: var(--night-soft);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .drop:hover {
+    border-color: var(--violet-soft);
+    background: #17112d;
+  }
+
+  .drop.over {
+    border-color: var(--accent);
+    background: rgba(139, 92, 246, 0.15);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+  }
+
+  .drop.filled {
+    border-style: solid;
+    border-color: rgba(139, 92, 246, 0.5);
+    background: rgba(26, 20, 48, 0.9);
+  }
+
+  .drop input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+  }
+
+  .thumb {
+    width: 80px;
+    height: 80px;
+    border-radius: 14px;
+    flex: none;
+    background: #251b42 center/cover no-repeat;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-align: center;
+    border: 1px solid var(--line);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  }
+
+  .note-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 14px;
+    flex: none;
+    background: linear-gradient(135deg, #251b42, #392468);
+    display: grid;
+    place-items: center;
+    font-size: 2rem;
+    color: var(--violet-soft);
+    border: 1px solid var(--line);
+  }
+
+  .drop-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .drop-title {
+    font-weight: 700;
+    font-size: 0.96rem;
+    color: var(--text);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .drop-sub {
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .drop-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    background: rgba(139, 92, 246, 0.2);
+    border-radius: 6px;
+    font-size: 0.74rem;
+    color: var(--violet-soft);
+    margin-top: 4px;
+    font-weight: 600;
+  }
+
+  /* Audio player inline preview */
+  .audio-preview {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: #140d28;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+  }
+
+  .audio-preview audio {
+    width: 100%;
+    height: 36px;
+    filter: invert(1) hue-rotate(180deg) saturate(1.5);
+  }
+
+  /* Naming notice */
+  .naming-box {
+    margin: 18px 0;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(15, 10, 28, 0.9);
+    border: 1px solid var(--line);
+    font-size: 0.86rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .naming-box b {
+    color: var(--violet-soft);
+    font-weight: 600;
+    word-break: break-all;
+  }
+
+  .naming-preview-tag {
+    display: inline-block;
+    background: rgba(139, 92, 246, 0.2);
+    color: var(--accent);
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 0.76rem;
+    margin-left: 4px;
+    font-weight: 600;
+  }
+
+  /* Moonlight App Card Preview */
+  .preview-wrapper {
+    margin-top: 24px;
+    background: linear-gradient(145deg, #181131, #0d081f);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 20px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .preview-badge {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--moon);
+    background: rgba(254, 243, 199, 0.12);
+    border: 1px solid rgba(254, 243, 199, 0.25);
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+
+  .app-card-demo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .app-art {
+    width: 68px;
+    height: 68px;
+    border-radius: 14px;
+    background: #251b42 center/cover no-repeat;
+    flex: none;
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+    display: grid;
+    place-items: center;
+    font-size: 1.4rem;
+    color: var(--violet-soft);
+  }
+
+  .app-meta {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .app-song-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .app-song-artist {
+    font-size: 0.85rem;
+    color: var(--violet-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .app-song-shelves {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+
+  .app-shelf-pill {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(139, 92, 246, 0.25);
+    color: var(--text);
+  }
+
+  /* Button */
+  button.go {
+    width: 100%;
+    padding: 16px 24px;
+    border: 0;
+    border-radius: 16px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    color: #0d081f;
+    background: linear-gradient(135deg, #ffffff 0%, var(--violet-soft) 40%, #c026d3 100%);
+    box-shadow: 0 10px 30px -5px rgba(139, 92, 246, 0.5);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 22px;
+  }
+
+  button.go:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 35px -4px rgba(192, 38, 211, 0.6);
+  }
+
+  button.go:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  button.go:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* Status */
+  .status {
+    margin-top: 16px;
+    min-height: 1.5em;
+    font-size: 0.94rem;
+    text-align: center;
+    padding: 10px 14px;
+    border-radius: 12px;
+    display: none;
+  }
+
+  .status.show { display: block; }
+  .status.info { background: rgba(139, 92, 246, 0.15); color: var(--violet-soft); border: 1px solid var(--panel-border); }
+  .status.ok { background: rgba(74, 222, 128, 0.15); color: var(--ok); border: 1px solid rgba(74, 222, 128, 0.3); }
+  .status.err { background: rgba(248, 113, 113, 0.15); color: var(--err); border: 1px solid rgba(248, 113, 113, 0.3); }
+
+  /* Results section */
+  .results {
+    margin-top: 36px;
+  }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .results h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .song-card {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  }
+
+  .song-card img {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: #251b42;
+  }
+
+  .song-card .t {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #ffffff;
+  }
+
+  .song-card .a {
+    font-size: 0.88rem;
+    color: var(--violet-soft);
+    margin-top: 2px;
+  }
+
+  .song-card .id-pill {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 0.76rem;
+    color: var(--muted);
+    background: var(--night-soft);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+  }
+
+  .copy-grid {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .copy-grid button {
+    padding: 7px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--night-soft);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .copy-grid button:hover {
+    border-color: var(--violet-soft);
+    background: #231940;
+    color: #ffffff;
+  }
+
+  .app-sync-tip {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.25);
+    border-radius: 10px;
+    font-size: 0.84rem;
+    color: #bbf7d0;
+  }
+
+  /* Spinner */
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2.5px solid rgba(13, 8, 31, 0.3);
+    border-top-color: #0d081f;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+
+<main class="wrap">
+  <!-- Header -->
+  <header class="header">
+    <div class="moon-wrap">
+      <div class="moon" aria-hidden="true"></div>
+    </div>
+    <h1>MOONLIGHT UPLOADER</h1>
+    <p class="sub">Upload mashups & songs directly to Google Drive. Auto-formatted for Moonlight App.</p>
+    <div class="drive-pill">
+      <span class="dot"></span>
+      <span>Drive Folder: <b>1hu1kGOq...3FB7n</b></span>
+    </div>
+  </header>
+
+  <!-- Upload Form Card -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <span>Song Details & Metadata</span>
+    </div>
+
+    <!-- Inputs row: Title & Artist -->
+    <div class="form-row">
+      <label class="field">
+        <span class="field-label">
+          <span>Song / Mashup Title</span>
+          <span class="field-hint">e.g. Ek Mulaqat X Barbaad</span>
+        </span>
+        <input type="text" id="title" placeholder="Song Title" autocomplete="off">
+      </label>
+
+      <label class="field">
+        <span class="field-label">
+          <span>Artist / DJ / Creator</span>
+          <span class="field-hint">e.g. Love Mashup</span>
+        </span>
+        <input type="text" id="artist" placeholder="Artist or Creator (optional)" autocomplete="off">
+      </label>
+    </div>
+
+    <!-- Mood & Category Selector -->
+    <div class="tags-title">
+      <span>Moonlight App Mood & Category</span>
+      <span class="field-hint">App automatically sorts by these</span>
+    </div>
+
+    <div class="tags-grid" id="tagsGrid">
+      <div class="tag-chip active" data-tag="chill" data-label="Chill">
+        <span class="emoji">🌙</span><span>Chill / Lo-Fi</span>
+      </div>
+      <div class="tag-chip active" data-tag="love" data-label="Romance">
+        <span class="emoji">❤️</span><span>Romance / Love</span>
+      </div>
+      <div class="tag-chip" data-tag="party" data-label="Party">
+        <span class="emoji">🔥</span><span>Midnight Party</span>
+      </div>
+      <div class="tag-chip" data-tag="sad" data-label="Sad">
+        <span class="emoji">🌧️</span><span>Sad / Rainy</span>
+      </div>
+      <div class="tag-chip active" data-tag="mashup" data-label="Mashup">
+        <span class="emoji">🎧</span><span>Mashup / Remix</span>
+      </div>
+      <div class="tag-chip" data-tag="bollywood" data-label="Bollywood">
+        <span class="emoji">🎬</span><span>Bollywood</span>
+      </div>
+      <div class="tag-chip" data-tag="punjabi" data-label="Punjabi">
+        <span class="emoji">🪕</span><span>Punjabi</span>
+      </div>
+      <div class="tag-chip" data-tag="focus" data-label="Focus">
+        <span class="emoji">🧘</span><span>Deep Focus</span>
+      </div>
+      <div class="tag-chip" data-tag="workout" data-label="Workout">
+        <span class="emoji">⚡</span><span>Workout / Beat</span>
+      </div>
+      <div class="tag-chip" data-tag="devotional" data-label="Devotional">
+        <span class="emoji">🌸</span><span>Devotional</span>
+      </div>
+      <div class="tag-chip" data-tag="pop" data-label="Pop">
+        <span class="emoji">✨</span><span>Pop</span>
+      </div>
+      <div class="tag-chip" data-tag="hiphop" data-label="Hip-Hop">
+        <span class="emoji">🎤</span><span>Hip-Hop</span>
+      </div>
+    </div>
+
+    <!-- File selection row -->
+    <div class="form-row">
+      <!-- Thumbnail -->
+      <div class="field">
+        <div class="field-label">
+          <span>Square Cover Artwork</span>
+          <span class="field-hint">JPG or PNG (1:1 looks best)</span>
+        </div>
+        <div class="drop" id="dropThumb">
+          <input type="file" id="thumbFile" accept="image/jpeg,image/png" aria-label="Choose thumbnail">
+          <div class="thumb" id="thumbPreview">No Cover</div>
+          <div class="drop-info">
+            <div class="drop-title" id="thumbName">Choose or drop cover image</div>
+            <div class="drop-sub">High-res artwork for player</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audio -->
+      <div class="field">
+        <div class="field-label">
+          <span>Audio File (MP3)</span>
+          <span class="field-hint">Max 30 MB</span>
+        </div>
+        <div class="drop" id="dropAudio">
+          <input type="file" id="audioFile" accept="audio/mpeg,.mp3" aria-label="Choose MP3">
+          <div class="note-icon" aria-hidden="true">&#9835;</div>
+          <div class="drop-info">
+            <div class="drop-title" id="audioName">Choose or drop MP3</div>
+            <div class="drop-sub" id="audioSize">Auto-detects title & tags</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audio Player Preview -->
+    <div class="audio-preview" id="audioPreviewWrap" hidden>
+      <audio id="player" controls></audio>
+    </div>
+
+    <!-- Live Moonlight App Card Preview -->
+    <div class="preview-wrapper">
+      <span class="preview-badge">Moonlight App Preview</span>
+      <div class="app-card-demo">
+        <div class="app-art" id="previewArt">&#9835;</div>
+        <div class="app-meta">
+          <div class="app-song-title" id="previewTitle">Song Title</div>
+          <div class="app-song-artist" id="previewArtist">Artist / Creator</div>
+          <div class="app-song-shelves" id="previewShelves">
+            <span class="app-shelf-pill">🌙 Chill</span>
+            <span class="app-shelf-pill">❤️ Romance</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto-naming notice -->
+    <div class="naming-box" id="naming">
+      Drive File: <b id="namingAudio">Song - Artist.mp3</b><br>
+      Cover File: <b id="namingCover">moonlight-cover-(auto-id).jpg</b>
+    </div>
+
+    <!-- Upload Button -->
+    <button class="go" id="go" disabled>
+      <span id="btnText">Upload to Moonlight App</span>
+    </button>
+
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </div>
+
+  <!-- Results Section -->
+  <section class="results" id="results" hidden>
+    <div class="results-header">
+      <h2>Uploaded to Google Drive</h2>
+    </div>
+    <div id="list"></div>
+  </section>
+</main>
+
+<script>
+/* ====== SETTINGS: Google Apps Script Backend ====== */
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzcXCIU6nAe3v8IbPi3DxVwZIfKSEr7RwMD8f9NMWk11s58G6pDY3xh1Ig7of5vXBi6/exec";
+const SECRET_KEY = "anishkumwat";
+const MAX_AUDIO_MB = 30;
+/* ================================================== */
+
+const $ = id => document.getElementById(id);
+let thumb = null, audio = null;
+const selectedTags = new Set(["chill", "love", "mashup"]);
+
+// Interactive tags toggle
+document.querySelectorAll(".tag-chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    const tag = chip.getAttribute("data-tag");
+    if (selectedTags.has(tag)) {
+      selectedTags.delete(tag);
+      chip.classList.remove("active");
+    } else {
+      selectedTags.add(tag);
+      chip.classList.add("active");
+    }
+    refresh();
+  });
+});
+
+function newSongId(){
+  return "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+}
+
+function extOf(file){
+  return file.type === "image/png" ? "png" : "jpg";
+}
+
+function toBase64(file){
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(",")[1]);
+    r.onerror = () => reject(new Error("Could not read " + file.name));
+    r.readAsDataURL(file);
+  });
+}
+
+function getFormattedDriveTitle() {
+  const rawTitle = $("title").value.trim() || "Untitled Song";
+  const rawArtist = $("artist").value.trim() || "Moonlight";
+  const tagsList = Array.from(selectedTags);
+  const tagSuffix = tagsList.length ? " " + tagsList.join(" ") : "";
+  
+  // Format: Title - Artist tag1 tag2
+  // parseSongName in Moonlight splits at ' - ':
+  // song.title = Title
+  // song.artist = Artist tag1 tag2 (matches Moonlight mood filters and search categories!)
+  return `${rawTitle} - ${rawArtist}${tagSuffix}`;
+}
+
+function refresh(){
+  const titleVal = $("title").value.trim();
+  const artistVal = $("artist").value.trim() || "Moonlight Mashup";
+  const canUpload = !!(thumb && audio && titleVal);
+  $("go").disabled = !canUpload;
+
+  // Update App Demo Preview
+  $("previewTitle").textContent = titleVal || "Song Title";
+  $("previewArtist").textContent = artistVal;
+
+  // Update Preview Shelves
+  const shelvesContainer = $("previewShelves");
+  shelvesContainer.innerHTML = "";
+  selectedTags.forEach(tag => {
+    const chip = document.querySelector(`.tag-chip[data-tag="${tag}"]`);
+    if (chip) {
+      const pill = document.createElement("span");
+      pill.className = "app-shelf-pill";
+      pill.textContent = chip.textContent.trim();
+      shelvesContainer.appendChild(pill);
+    }
+  });
+
+  // Update Naming Box
+  const formatted = getFormattedDriveTitle();
+  const ext = thumb ? extOf(thumb) : "jpg";
+  $("namingAudio").textContent = formatted + ".mp3";
+  $("namingCover").textContent = "moonlight-cover-(drive-id)." + ext;
+}
+
+function setThumb(file){
+  if(!file) return;
+  if(!/^image\/(jpeg|png)$/.test(file.type)){
+    say("Thumbnail must be a JPG or PNG image.", "err");
+    return;
+  }
+  thumb = file;
+  const url = URL.createObjectURL(file);
+  $("thumbPreview").style.backgroundImage = "url(" + url + ")";
+  $("thumbPreview").textContent = "";
+  $("thumbName").textContent = file.name;
+  $("dropThumb").classList.add("filled");
+
+  $("previewArt").style.backgroundImage = "url(" + url + ")";
+  $("previewArt").textContent = "";
+
+  say("");
+  refresh();
+}
+
+function setAudio(file){
+  if(!file) return;
+  if(!/\.mp3$/i.test(file.name) && file.type !== "audio/mpeg"){
+    say("Audio must be an MP3 file.", "err");
+    return;
+  }
+  if(file.size > MAX_AUDIO_MB * 1024 * 1024){
+    say("That MP3 is over " + MAX_AUDIO_MB + " MB. Please use a smaller file.", "err");
+    return;
+  }
+  audio = file;
+  $("audioName").textContent = file.name;
+  $("audioSize").textContent = (file.size / 1048576).toFixed(1) + " MB";
+  
+  const url = URL.createObjectURL(file);
+  $("player").src = url;
+  $("audioPreviewWrap").hidden = false;
+  $("dropAudio").classList.add("filled");
+
+  // Auto-detect Title, Artist & Tags from filename if title is empty
+  autoDetectFromFilename(file.name);
+
+  say("");
+  refresh();
+}
+
+function autoDetectFromFilename(fileName) {
+  // Remove extension
+  const stem = fileName.replace(/\.[^.]+$/, '').trim();
+
+  // If title is currently blank, parse stem
+  if (!$("title").value.trim()) {
+    let title = stem;
+    let artist = "";
+
+    const sepIndex = stem.indexOf(" - ");
+    if (sepIndex > 0) {
+      title = stem.slice(0, sepIndex).trim();
+      artist = stem.slice(sepIndex + 3).trim();
+    }
+
+    // Clean up typical release junk from title
+    title = title.replace(/\(Full Version\)|\(Official Video\)|\(Audio\)|\[.*?\]/gi, '').trim();
+    
+    $("title").value = title;
+    if (artist && !$("artist").value.trim()) {
+      $("artist").value = artist;
+    }
+
+    // Auto-detect tags from filename
+    const lower = stem.toLowerCase();
+    const tagKeywords = {
+      love: ["love", "romance", "romantic", "dil", "mohabbat"],
+      chill: ["chill", "lofi", "lo-fi", "slow", "acoustic", "peace"],
+      party: ["party", "dance", "remix", "club", "dhamaka", "dj"],
+      sad: ["sad", "dard", "judaai", "broken", "tears"],
+      mashup: ["mashup", "mixtape", "mega mashup"],
+      punjabi: ["punjabi", "karan aujla", "sidhu", "ap dhillon", "diljit"],
+      bollywood: ["bollywood", "hindi", "arijit"],
+      workout: ["workout", "gym", "energy", "bass"]
+    };
+
+    Object.entries(tagKeywords).forEach(([tag, words]) => {
+      if (words.some(w => lower.includes(w))) {
+        selectedTags.add(tag);
+        const chip = document.querySelector(`.tag-chip[data-tag="${tag}"]`);
+        if (chip) chip.classList.add("active");
+      }
+    });
+  }
+}
+
+function say(msg, kind){
+  const s = $("status");
+  if (!msg) {
+    s.textContent = "";
+    s.className = "status";
+    return;
+  }
+  s.textContent = msg;
+  s.className = "status show " + (kind || "info");
+}
+
+function wireDrop(zone, onFile){
+  ["dragenter","dragover"].forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.add("over"); }));
+  ["dragleave","drop"].forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.remove("over"); }));
+  zone.addEventListener("drop", ev => {
+    ev.preventDefault();
+    if (ev.dataTransfer.files && ev.dataTransfer.files[0]) {
+      onFile(ev.dataTransfer.files[0]);
+    }
+  });
+}
+
+$("thumbFile").addEventListener("change", e => setThumb(e.target.files[0]));
+$("audioFile").addEventListener("change", e => setAudio(e.target.files[0]));
+$("title").addEventListener("input", refresh);
+$("artist").addEventListener("input", refresh);
+
+wireDrop($("dropThumb"), setThumb);
+wireDrop($("dropAudio"), setAudio);
+
+// Upload Action
+$("go").addEventListener("click", async () => {
+  if(!thumb || !audio || !$("title").value.trim()) return;
+
+  const titleToSend = getFormattedDriveTitle();
+  const id = newSongId();
+
+  $("go").disabled = true;
+  $("btnText").innerHTML = '<div class="spinner"></div> Uploading to Google Drive…';
+  say("Encoding files and transferring to Google Drive... Keep this tab open.", "info");
+
+  try{
+    const [audioB64, thumbB64] = await Promise.all([toBase64(audio), toBase64(thumb)]);
+    
+    say("Saving song and cover to Moonlight Drive folder...", "info");
+
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        key: SECRET_KEY,
+        id: id,
+        title: titleToSend,
+        audio: audioB64,
+        thumb: thumbB64,
+        thumbExt: extOf(thumb),
+        thumbType: thumb.type
+      })
+    });
+
+    const out = await res.json();
+    if(!out.ok) throw new Error(out.error || "Upload failed");
+
+    addResult(out, $("title").value.trim(), $("artist").value.trim() || "Moonlight Mashup");
+    say("Song uploaded successfully! It is now live in your Moonlight App.", "ok");
+    reset();
+  }catch(err){
+    say("Upload failed: " + err.message + ". Please check internet and try again.", "err");
+  }finally{
+    $("go").disabled = false;
+    $("btnText").textContent = "Upload to Moonlight App";
+  }
+});
+
+function reset(){
+  thumb = audio = null;
+  $("title").value = "";
+  $("artist").value = "";
+  
+  $("thumbPreview").style.backgroundImage = "";
+  $("thumbPreview").textContent = "No Cover";
+  $("thumbName").textContent = "Choose or drop cover image";
+  
+  $("audioName").textContent = "Choose or drop MP3";
+  $("audioSize").textContent = "Auto-detects title & tags";
+  
+  $("player").pause();
+  $("player").removeAttribute("src");
+  $("audioPreviewWrap").hidden = true;
+  
+  $("previewArt").style.backgroundImage = "";
+  $("previewArt").textContent = "\u266B";
+  
+  $("dropThumb").classList.remove("filled");
+  $("dropAudio").classList.remove("filled");
+  
+  $("thumbFile").value = "";
+  $("audioFile").value = "";
+  
+  refresh();
+}
+
+function addResult(o, cleanTitle, cleanArtist){
+  $("results").hidden = false;
+  const el = document.createElement("div");
+  el.className = "song-card";
+  
+  const img = document.createElement("img");
+  img.src = o.thumbPreviewLink || o.thumbLink;
+  img.alt = cleanTitle;
+
+  const box = document.createElement("div");
+  
+  const t = document.createElement("div");
+  t.className = "t";
+  t.textContent = cleanTitle;
+
+  const a = document.createElement("div");
+  a.className = "a";
+  a.textContent = cleanArtist;
+
+  const idTag = document.createElement("div");
+  idTag.className = "id-pill";
+  idTag.textContent = "Drive ID: " + o.id;
+
+  const copyRow = document.createElement("div");
+  copyRow.className = "copy-grid";
+
+  const jsonSnippet = JSON.stringify({
+    id: o.id,
+    title: cleanTitle,
+    artist: cleanArtist,
+    audioUrl: o.mp3Link,
+    coverUrl: o.thumbLink
+  }, null, 2);
+
+  const copyActions = [
+    ["Copy Song ID", o.id],
+    ["Copy MP3 Link", o.mp3Link],
+    ["Copy Cover Link", o.thumbLink],
+    ["Copy JSON Snippet", jsonSnippet]
+  ];
+
+  copyActions.forEach(([label, val]) => {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(val);
+        b.textContent = "Copied!";
+        setTimeout(() => b.textContent = label, 1200);
+      } catch(e) {
+        prompt("Copy this:", val);
+      }
+    };
+    copyRow.appendChild(b);
+  });
+
+  const tip = document.createElement("div");
+  tip.className = "app-sync-tip";
+  tip.innerHTML = "\uD83D\uDCF1 <b>Moonlight App Sync:</b> Moonlight App open karein aur Home screen par <b>Refresh (\uD83D\uDD04)</b> icon dabayein. Ye naya song turant play hone ke liye add ho jayega!";
+
+  box.append(t, a, idTag, copyRow, tip);
+  el.append(img, box);
+  $("list").prepend(el);
+}
+
+// Initial calculation
+refresh();
+</script>
+</body>
+</html>

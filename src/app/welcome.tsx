@@ -19,19 +19,30 @@ import { saveUserProfile } from '../lib/userProfile';
 
 const BG = '#08060f';
 
-function isValidDateOfBirth(value: string): boolean {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
-  if (!match) return false;
+function parseFlexibleDate(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  // Match DD/MM/YYYY or DD-MM-YYYY or D/M/YYYY
+  const match = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/.exec(trimmed);
+  if (!match) return null;
 
   const day = Number(match[1]);
   const month = Number(match[2]);
   const year = Number(match[3]);
   const date = new Date(year, month - 1, day);
-  return year >= 1900
-    && date.getFullYear() === year
-    && date.getMonth() === month - 1
-    && date.getDate() === day
-    && date <= new Date();
+
+  if (
+    year >= 1900 &&
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day &&
+    date <= new Date()
+  ) {
+    const dd = day < 10 ? `0${day}` : `${day}`;
+    const mm = month < 10 ? `0${month}` : `${month}`;
+    return `${dd}/${mm}/${year}`;
+  }
+  return null;
 }
 
 export default function WelcomeScreen() {
@@ -42,29 +53,62 @@ export default function WelcomeScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const submit = async () => {
+  const submit = async (isGuest = false) => {
+    if (isGuest) {
+      setSaving(true);
+      setError('');
+      try {
+        await saveUserProfile({
+          name: 'Midnight Listener',
+          dateOfBirth: '',
+          phone: '',
+        });
+        router.replace('/home');
+      } catch {
+        router.replace('/home');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     const cleanName = name.trim();
     const cleanDateOfBirth = dateOfBirth.trim();
     const cleanPhone = phone.trim();
-    const digits = cleanPhone.replace(/\D/g, '');
 
     if (!cleanName) {
-      setError('Please enter your name.');
+      setError('Please enter your name or tap "Skip for now".');
       return;
     }
-    if (!isValidDateOfBirth(cleanDateOfBirth)) {
-      setError('Date of birth DD/MM/YYYY format me enter karein.');
-      return;
+
+    let formattedDob = '';
+    if (cleanDateOfBirth) {
+      const parsed = parseFlexibleDate(cleanDateOfBirth);
+      if (!parsed) {
+        setError('Please enter a valid date of birth (DD/MM/YYYY).');
+        return;
+      }
+      formattedDob = parsed;
     }
-    if (!/^[+\d()\s-]+$/.test(cleanPhone) || digits.length < 10 || digits.length > 15) {
-      setError('Please enter a valid phone number.');
-      return;
+
+    let formattedPhone = '';
+    if (cleanPhone) {
+      const digits = cleanPhone.replace(/\D/g, '');
+      if (!/^[+\d()\s-]+$/.test(cleanPhone) || digits.length < 10 || digits.length > 15) {
+        setError('Please enter a valid 10-15 digit phone number or leave it blank.');
+        return;
+      }
+      formattedPhone = cleanPhone;
     }
 
     setSaving(true);
     setError('');
     try {
-      await saveUserProfile({ name: cleanName, dateOfBirth: cleanDateOfBirth, phone: cleanPhone });
+      await saveUserProfile({
+        name: cleanName,
+        dateOfBirth: formattedDob,
+        phone: formattedPhone,
+      });
       router.replace('/home');
     } catch (saveError: unknown) {
       setError(saveError instanceof Error ? saveError.message : 'Could not save your profile.');
@@ -92,42 +136,62 @@ export default function WelcomeScreen() {
               contentFit="contain"
             />
             <Text style={styles.brand}>MOONLIGHT</Text>
-            <Text style={styles.title}>Create your profile</Text>
-            <Text style={styles.subtitle}>A few details to get started</Text>
+            <Text style={styles.title}>Welcome</Text>
+            <Text style={styles.subtitle}>Music for the midnight mood</Text>
 
             <View style={styles.form}>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Name"
-                placeholderTextColor="#a89fc7"
-                style={styles.input}
-                autoCapitalize="words"
-                autoComplete="name"
-                returnKeyType="next"
-              />
-              <TextInput
-                value={dateOfBirth}
-                onChangeText={setDateOfBirth}
-                placeholder="Date of birth (DD/MM/YYYY)"
-                placeholderTextColor="#a89fc7"
-                style={styles.input}
-                keyboardType="numbers-and-punctuation"
-                maxLength={10}
-                returnKeyType="next"
-              />
-              <TextInput
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="Phone number"
-                placeholderTextColor="#a89fc7"
-                style={styles.input}
-                keyboardType="phone-pad"
-                autoComplete="tel"
-                maxLength={20}
-                returnKeyType="done"
-                onSubmitEditing={() => void submit()}
-              />
+              <View>
+                <Text style={styles.inputLabel}>Your Name *</Text>
+                <TextInput
+                  value={name}
+                  onChangeText={(t) => {
+                    setName(t);
+                    if (error) setError('');
+                  }}
+                  placeholder="e.g. Alex"
+                  placeholderTextColor="#7c729c"
+                  style={styles.input}
+                  autoCapitalize="words"
+                  autoComplete="name"
+                  returnKeyType="next"
+                />
+              </View>
+
+              <View>
+                <Text style={styles.inputLabel}>Date of birth (optional)</Text>
+                <TextInput
+                  value={dateOfBirth}
+                  onChangeText={(t) => {
+                    setDateOfBirth(t);
+                    if (error) setError('');
+                  }}
+                  placeholder="DD/MM/YYYY"
+                  placeholderTextColor="#7c729c"
+                  style={styles.input}
+                  keyboardType="numbers-and-punctuation"
+                  maxLength={10}
+                  returnKeyType="next"
+                />
+              </View>
+
+              <View>
+                <Text style={styles.inputLabel}>Phone number (optional)</Text>
+                <TextInput
+                  value={phone}
+                  onChangeText={(t) => {
+                    setPhone(t);
+                    if (error) setError('');
+                  }}
+                  placeholder="+91 or standard phone"
+                  placeholderTextColor="#7c729c"
+                  style={styles.input}
+                  keyboardType="phone-pad"
+                  autoComplete="tel"
+                  maxLength={20}
+                  returnKeyType="done"
+                  onSubmitEditing={() => void submit(false)}
+                />
+              </View>
             </View>
 
             {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
@@ -135,16 +199,26 @@ export default function WelcomeScreen() {
             <TouchableOpacity
               style={[styles.button, saving && styles.buttonDisabled]}
               activeOpacity={0.85}
-              onPress={() => void submit()}
+              onPress={() => void submit(false)}
               disabled={saving}
             >
               {saving ? (
                 <ActivityIndicator color="#08060f" />
               ) : (
-                <Text style={styles.buttonText}>Continue</Text>
+                <Text style={styles.buttonText}>Get Started</Text>
               )}
             </TouchableOpacity>
-            <Text style={styles.privacy}>Saved on this device only; not synced to an account.</Text>
+
+            <TouchableOpacity
+              style={styles.skipButton}
+              activeOpacity={0.7}
+              onPress={() => void submit(true)}
+              disabled={saving}
+            >
+              <Text style={styles.skipButtonText}>Skip for now & explore music</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.privacy}>Saved locally on your device only.</Text>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -157,39 +231,60 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   flex: { flex: 1 },
   content: {
-    flexGrow: 1,
+    paddingHorizontal: 28,
+    paddingTop: 32,
+    paddingBottom: 28,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 32,
   },
-  logo: { width: 78, height: 78 },
-  brand: { color: '#a78bfa', fontSize: 11, fontWeight: '800', letterSpacing: 3, marginTop: 8 },
-  title: { color: '#f5f3ff', fontSize: 27, fontWeight: '800', marginTop: 28 },
-  subtitle: { color: '#a89fc7', fontSize: 15, marginTop: 8 },
-  form: { width: '100%', maxWidth: 420, gap: 13, marginTop: 30 },
+  logo: { width: 88, height: 88, marginBottom: 12 },
+  brand: { color: '#a78bfa', fontSize: 13, letterSpacing: 3, fontWeight: '700' },
+  title: { color: '#f5f3ff', fontSize: 28, fontWeight: '800', marginTop: 10 },
+  subtitle: { color: '#a89fc7', fontSize: 14, marginTop: 6, marginBottom: 24 },
+  form: { width: '100%', gap: 14 },
+  inputLabel: {
+    color: '#a89fc7',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+    marginLeft: 4,
+  },
   input: {
-    color: '#f5f3ff',
-    backgroundColor: '#171128',
-    borderColor: 'rgba(167,139,250,0.3)',
+    backgroundColor: '#1a1430',
     borderWidth: 1,
-    borderRadius: 15,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    fontSize: 16,
+    borderColor: 'rgba(167,139,250,0.25)',
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    color: '#f5f3ff',
+    fontSize: 15,
   },
-  error: { color: '#fda4af', marginTop: 14, textAlign: 'center' },
+  error: { color: '#fda4af', marginTop: 14, textAlign: 'center', fontSize: 13 },
   button: {
+    marginTop: 22,
     width: '100%',
-    maxWidth: 420,
-    minHeight: 50,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#a78bfa',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 25,
-    backgroundColor: '#c4b5fd',
-    marginTop: 22,
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
   buttonDisabled: { opacity: 0.7 },
-  buttonText: { color: '#08060f', fontSize: 16, fontWeight: '800' },
-  privacy: { color: '#a89fc7', fontSize: 12, marginTop: 16 },
+  buttonText: { color: '#08060f', fontSize: 16, fontWeight: '700' },
+  skipButton: {
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  skipButtonText: {
+    color: '#c4b5fd',
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  privacy: { color: '#7c729c', fontSize: 12, marginTop: 14, textAlign: 'center' },
 });

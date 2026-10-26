@@ -1,3 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import bundledSongsData from '../constants/songs.json';
+
 export type Song = {
   id: string;
   title: string;
@@ -6,6 +9,8 @@ export type Song = {
   coverUrl?: string;
   thumb?: string;
 };
+
+const bundledSongs: Song[] = (Array.isArray(bundledSongsData) ? bundledSongsData : []) as Song[];
 
 export const DRIVE_FOLDER_ID: string = '1hu1kGOqDz2zM8H7aNd4SzMQl9ru3FB7n';
 export const DRIVE_API_KEY: string = 'AIzaSyCRrMCDmjfP6XL8V_rGL5YNDQtts_00qKw';
@@ -28,11 +33,29 @@ type DriveFileList = {
 
 const AUDIO_EXTENSIONS = /\.(mp3|m4a|aac|wav|ogg|flac|opus)$/i;
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp)$/i;
-const SONG_CACHE_TTL = 60_000;
+const SONG_CACHE_TTL = 120_000;
+const SONGS_STORAGE_KEY = '@moonlight/cached_songs';
+const SEARCH_STOPWORDS = new Set(['song', 'songs', 'music', 'track', 'audio', 'mp3']);
 
-let cachedSongs: Song[] | null = null;
-let cachedAt = 0;
+export const TAG_SYNONYMS: Record<string, string[]> = {
+  bollywood: ['bollywood', 'hindi', 'filmi'],
+  punjabi: ['punjabi'],
+  hiphop: ['hiphop', 'hip hop', 'rap'],
+  love: ['love', 'romance', 'romantic', 'dil', 'ishq', 'pyaar', 'mohabbat'],
+  romance: ['love', 'romance', 'romantic', 'dil', 'ishq', 'pyaar', 'mohabbat'],
+  party: ['party', 'dance', 'club', 'remix', 'dhamaka', 'dj', 'bass'],
+  workout: ['workout', 'gym', 'beat', 'bass', 'energy', 'power'],
+  chill: ['chill', 'acoustic', 'slow', 'unplugged', 'peace', 'lofi', 'lo fi'],
+  focus: ['focus', 'ambient', 'study', 'peace', 'chill', 'flow', 'deep'],
+  devotional: ['devotional', 'bhajan', 'aarti', 'krishna', 'shiva', 'ram', 'hanuman', 'god', 'prarthana', 'bhakti'],
+  sad: ['sad', 'dard', 'judaai', 'alone', 'broken', 'tears', 'bewafa'],
+  pop: ['pop'],
+};
+
+let cachedSongs: Song[] | null = bundledSongs.length > 0 ? bundledSongs : null;
+let cachedAt = bundledSongs.length > 0 ? Date.now() : 0;
 let songsRequest: Promise<Song[]> | null = null;
+let storageLoadPromise: Promise<Song[] | null> | null = null;
 
 function fileStem(name: string): string {
   return name.replace(/\.[^.]+$/, '').trim();
@@ -52,23 +75,54 @@ function isImageFile(file: DriveFile): boolean {
 
 function parseSongName(name: string): { title: string; artist: string } {
   const stem = fileStem(name);
-  const separator = stem.indexOf(' - ');
-  if (separator < 0) return { title: stem, artist: 'Unknown' };
+  const match = stem.match(/\s+[-–—]\s*/);
+  if (!match || match.index === undefined) {
+    return { title: stem, artist: 'Unknown' };
+  }
 
+  const title = stem.slice(0, match.index).trim();
+  const artist = stem.slice(match.index + match[0].length).trim();
   return {
-    title: stem.slice(0, separator).trim(),
-    artist: stem.slice(separator + 3).trim() || 'Unknown',
+    title: title || stem,
+    artist: artist || 'Unknown',
   };
 }
 
 function audioUrl(fileId: string): string {
-  const params = new URLSearchParams({ export: 'download', id: fileId });
-  return `https://drive.google.com/uc?${params.toString()}`;
+  const params = new URLSearchParams({ alt: 'media', key: DRIVE_API_KEY });
+  return `${DRIVE_API}/files/${fileId}?${params.toString()}`;
 }
 
-function coverUrl(fileId: string): string {
-  const params = new URLSearchParams({ id: fileId, sz: 'w1000' });
+function coverUrl(fileId: string, size = 'w800'): string {
+  const params = new URLSearchParams({ id: fileId, sz: size });
   return `https://drive.google.com/thumbnail?${params.toString()}`;
+}
+
+async function loadFromStorage(): Promise<Song[] | null> {
+  if (storageLoadPromise) return storageLoadPromise;
+  storageLoadPromise = (async () => {
+    try {
+      const data = await AsyncStorage.getItem(SONGS_STORAGE_KEY);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Normalize audioUrl so any previously cached URLs are migrated to the working endpoint
+          return (parsed as Song[]).map((song) => ({
+            ...song,
+            audioUrl: audioUrl(song.id),
+          }));
+        }
+      }
+    } catch {}
+    return null;
+  })();
+  return storageLoadPromise;
+}
+
+async function saveToStorage(songs: Song[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(SONGS_STORAGE_KEY, JSON.stringify(songs));
+  } catch {}
 }
 
 async function listFolderFiles(): Promise<DriveFile[]> {
@@ -84,7 +138,19 @@ async function listFolderFiles(): Promise<DriveFile[]> {
     });
     if (pageToken) params.set('pageToken', pageToken);
 
-    const response = await fetch(`${DRIVE_API}/files?${params.toString()}`);
+    // 10s request timeout so app never hangs
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    let response: Response;
+    try {
+      response = await fetch(`${DRIVE_API}/files?${params.toString()}`, {
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
     let result: DriveFileList;
     try {
       result = (await response.json()) as DriveFileList;
@@ -117,41 +183,78 @@ export async function fetchSongs(options: { force?: boolean } = {}): Promise<Son
     cachedSongs = null;
     cachedAt = 0;
   }
+
+  // Fast in-memory hit
   if (cachedSongs && Date.now() - cachedAt < SONG_CACHE_TTL) {
     return cachedSongs;
   }
+
+  // Instant startup from disk cache if not forcing refresh
+  if (!cachedSongs && !options.force) {
+    const diskSongs = await loadFromStorage();
+    if (diskSongs && diskSongs.length > 0) {
+      cachedSongs = diskSongs;
+      cachedAt = Date.now();
+      // Silently refresh in background
+      setTimeout(() => {
+        void fetchSongs({ force: true }).catch(() => {});
+      }, 500);
+      return diskSongs;
+    }
+  }
+
   if (songsRequest) {
     return songsRequest;
   }
 
   songsRequest = (async () => {
-    const files = await listFolderFiles();
-    const idCovers = new Map(
-      files
-        .filter((file) => isImageFile(file) && file.name.startsWith('moonlight-cover-'))
-        .map((file) => [file.name.replace(/^moonlight-cover-/, '').replace(/\.[^.]+$/, ''), file] as const)
-    );
-    const covers = new Map(
-      files.filter(isImageFile).map((file) => [normalizeName(file.name), file] as const)
-    );
+    try {
+      const files = await listFolderFiles();
+      const idCovers = new Map(
+        files
+          .filter((file) => isImageFile(file) && file.name.startsWith('moonlight-cover-'))
+          .map((file) => [file.name.replace(/^moonlight-cover-/, '').replace(/\.[^.]+$/, ''), file] as const)
+      );
+      const covers = new Map(
+        files.filter(isImageFile).map((file) => [normalizeName(file.name), file] as const)
+      );
 
-    const songs = files.filter(isAudioFile).map((file) => {
-      const fallback = parseSongName(file.name);
-      const cover = idCovers.get(file.id) ?? covers.get(normalizeName(file.name));
-      const thumbnail = cover ? coverUrl(cover.id) : file.thumbnailLink;
+      const songs = files.filter(isAudioFile).map((file) => {
+        const fallback = parseSongName(file.name);
+        const cover = idCovers.get(file.id) ?? covers.get(normalizeName(file.name));
+        const fullCover = cover ? coverUrl(cover.id, 'w800') : file.thumbnailLink;
+        // Optimized 300px thumbnail loads 5-10x faster than full 1000px art
+        const thumbCover = cover ? coverUrl(cover.id, 'w300') : file.thumbnailLink;
 
-      return {
-        id: file.id,
-        title: fallback.title,
-        artist: fallback.artist,
-        audioUrl: audioUrl(file.id),
-        ...(thumbnail ? { coverUrl: thumbnail, thumb: thumbnail } : {}),
-      };
-    });
+        return {
+          id: file.id,
+          title: fallback.title,
+          artist: fallback.artist,
+          audioUrl: audioUrl(file.id),
+          ...(fullCover ? { coverUrl: fullCover } : {}),
+          ...(thumbCover ? { thumb: thumbCover } : {}),
+        };
+      });
 
-    cachedSongs = songs;
-    cachedAt = Date.now();
-    return songs;
+      cachedSongs = songs;
+      cachedAt = Date.now();
+      void saveToStorage(songs);
+      return songs;
+    } catch (err) {
+      // If network fails but disk cache or bundled songs exist, gracefully fallback
+      const diskSongs = await loadFromStorage();
+      if (diskSongs && diskSongs.length > 0) {
+        cachedSongs = diskSongs;
+        cachedAt = Date.now();
+        return diskSongs;
+      }
+      if (bundledSongs && bundledSongs.length > 0) {
+        cachedSongs = bundledSongs;
+        cachedAt = Date.now();
+        return bundledSongs;
+      }
+      throw err;
+    }
   })();
 
   try {
@@ -208,15 +311,19 @@ function tokenScore(query: string, candidate: string): number {
 
 export async function searchSongs(query: string, library?: readonly Song[]): Promise<Song[]> {
   const normalizedQuery = normalizeQuery(query);
-  const queryWords = normalizedQuery.split(' ').filter(Boolean);
-  if (!queryWords.length) return [];
+  const rawWords = normalizedQuery.split(' ').filter(Boolean);
+  if (!rawWords.length) return [];
+
+  // Ignore generic stopwords if other search terms exist
+  const significantWords = rawWords.filter((w) => !SEARCH_STOPWORDS.has(w));
+  const queryWords = significantWords.length > 0 ? significantWords : rawWords;
 
   const songs = library ?? (await getAllSongs());
   const ranked = songs.flatMap((song) => {
     const title = normalizeQuery(song.title);
     const artist = normalizeQuery(song.artist);
-    const titleWords = title.split(' ');
-    const artistWords = artist.split(' ');
+    const titleWords = title.split(' ').filter(Boolean);
+    const artistWords = artist.split(' ').filter(Boolean);
     const candidateWords = [...titleWords, ...artistWords];
     let score = 0;
     let matches = 0;
@@ -226,6 +333,7 @@ export async function searchSongs(query: string, library?: readonly Song[]): Pro
     else if (title.includes(normalizedQuery)) score += 30;
     if (artist === normalizedQuery) score += 35;
     else if (artist.includes(normalizedQuery)) score += 20;
+
     for (const word of queryWords) {
       const best = candidateWords.reduce(
         (maximum, candidate) => Math.max(maximum, tokenScore(word, candidate)),
@@ -248,10 +356,19 @@ export async function searchSongs(query: string, library?: readonly Song[]): Pro
 export async function songsByTag(tag: string, library?: readonly Song[]): Promise<Song[]> {
   const normalizedTag = normalizeQuery(tag);
   const songs = library ?? (await getAllSongs());
+  const keywords = TAG_SYNONYMS[normalizedTag] ?? [normalizedTag];
+
   const matches = songs.filter((song) => {
     const searchable = normalizeQuery(`${song.title} ${song.artist}`);
-    return searchable.includes(normalizedTag);
+    const words = searchable.split(' ').filter(Boolean);
+    return keywords.some((kw) => {
+      if (kw.includes(' ')) {
+        return searchable.includes(kw);
+      }
+      return words.some((word) => word === kw || (kw.length >= 4 && word.startsWith(kw)));
+    });
   });
+
   return matches;
 }
 
@@ -274,6 +391,9 @@ export function songsErrorMessage(error?: unknown): string {
     message.includes('403')
   ) {
     return 'Google Drive denied access. Share the folder and its songs as Anyone with the link.';
+  }
+  if (message.includes('abort') || message.includes('timeout')) {
+    return 'Connection timed out. Check your internet connection and try again.';
   }
   if (message.includes('fetch') || message.includes('Network')) {
     return 'Could not connect to Google Drive. Check your internet connection and try again.';

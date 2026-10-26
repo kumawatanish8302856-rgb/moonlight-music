@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Redirect } from 'expo-router';
 import { loadUserProfile, type UserProfile } from '../lib/userProfile';
 
@@ -31,8 +32,12 @@ export default function IndexScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator color="#a78bfa" />
-        <Text style={styles.message}>Loading your profile...</Text>
+        <Image
+          source={require('@/assets/images/moonlight-logo.png')}
+          style={styles.logo}
+          contentFit="contain"
+        />
+        <ActivityIndicator color="#a78bfa" style={{ marginTop: 20 }} />
       </View>
     );
   }
@@ -65,6 +70,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#08060f',
     padding: 24,
   },
+  logo: { width: 90, height: 90 },
   message: { color: '#f5f3ff', textAlign: 'center', marginTop: 12 },
   retry: { marginTop: 18, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 22, backgroundColor: '#a78bfa' },
   retryText: { color: '#08060f', fontWeight: '700' },

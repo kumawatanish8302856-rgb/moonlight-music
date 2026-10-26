@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,12 +11,14 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from '../components/BottomNav';
 import Cover from '../components/Cover';
 import { playerStore, useLibrary, usePlayback, usePlaying, type Song } from '../lib/playerStore';
+import { TAG_SYNONYMS } from '../lib/songs';
 
 // ---------- Moonlight theme ----------
 const MOON = {
@@ -62,6 +64,27 @@ const MOODS: Mood[] = [
   { id: 'romance', label: 'Romance', icon: 'heart', grad: G.sunset, title: 'Love Under Moon', sub: 'Songs for two' },
 ];
 
+const SONG_SHUFFLE_SEED = Date.now();
+
+// ---------- Layout constants ----------
+const SIDE_PAD = 16;
+const GAP = 12;
+
+const renderGap = () => <View style={{ width: GAP }} />;
+
+function shuffleSongs(songs: readonly Song[]): Song[] {
+  const shuffled = [...songs];
+  let seed = SONG_SHUFFLE_SEED;
+
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const randomIndex = Math.floor((seed / 0x100000000) * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
 function getGreeting() {
   const h = new Date().getHours();
   if (h >= 22 || h < 5) return 'Good night';
@@ -70,34 +93,271 @@ function getGreeting() {
   return 'Good evening';
 }
 
-// ---------- Small components ----------
-const SongSection = memo(function SongSection({
+function pick(songs: Song[], offset: number, count: number): Song[] {
+  if (!songs.length) return [];
+  const n = Math.min(count, songs.length);
+  return Array.from({ length: n }, (_, i) => songs[(offset + i) % songs.length]);
+}
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+function formatCount(song: Song, unit: 'plays' | 'views'): string {
+  const real = (song as any)?.plays ?? (song as any)?.views;
+  let n = typeof real === 'number' ? real : 0;
+  if (!n) {
+    let h = 0;
+    const id = song?.id ?? '';
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    n = 10_000 + (h % 9_000_000);
+  }
+  const text =
+    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${Math.round(n / 1_000)}K` : `${n}`;
+  return `${text} ${unit}`;
+}
+
+// ---------- Shared: section header ----------
+const SectionHeader = memo(function SectionHeader({
   title,
-  songs,
-  onPlay,
+  subtitle,
+  onPlayAll,
 }: {
   title: string;
-  songs: Song[];
-  onPlay: (index: number) => void;
+  subtitle?: string;
+  onPlayAll: () => void;
 }) {
   return (
+    <View style={styles.sectionHeader}>
+      <View style={{ flex: 1, marginRight: 12 }}>
+        {!!subtitle && <Text style={styles.sectionKicker}>{subtitle}</Text>}
+        <Text style={styles.sectionTitle} numberOfLines={1}>{title}</Text>
+      </View>
+      <TouchableOpacity
+        style={styles.playAllBtn}
+        activeOpacity={0.8}
+        onPress={onPlayAll}
+        accessibilityRole="button"
+        accessibilityLabel={`Play all ${title}`}
+      >
+        <Ionicons name="play" size={11} color={MOON.primarySoft} />
+        <Text style={styles.playAllText}>Play all</Text>
+      </TouchableOpacity>
+    </View>
+  );
+});
+
+// ---------- Arrangement 1: multi-row paginated grid ----------
+const GridSection = memo(function GridSection({
+  title,
+  subtitle,
+  songs,
+  rows,
+  columnsCount,
+  unit,
+  onPlay,
+  onPlayAll,
+}: {
+  title: string;
+  subtitle?: string;
+  songs: Song[];
+  rows: number;
+  columnsCount?: number;
+  unit: 'plays' | 'views';
+  onPlay: (songs: Song[], index: number) => void;
+  onPlayAll: (songs: Song[]) => void;
+}) {
+  const { width } = useWindowDimensions();
+  const targetCols = columnsCount ?? (width >= 900 ? 3 : width >= 600 ? 2 : 1);
+  const effectiveCols = width < 600 ? 1 : targetCols;
+  const colWidth =
+    effectiveCols > 1
+      ? Math.floor((width - SIDE_PAD * 2 - (effectiveCols - 1) * GAP) / effectiveCols)
+      : Math.round(width * 0.88);
+  const columns = useMemo(() => chunk(songs, rows), [songs, rows]);
+
+  if (!songs.length) return null;
+
+  return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <SectionHeader title={title} subtitle={subtitle} onPlayAll={() => onPlayAll(songs)} />
+      <FlatList
+        data={columns}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={colWidth + GAP}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        disableIntervalMomentum
+        nestedScrollEnabled
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
+        keyExtractor={(col, index) => col[0]?.id ?? String(index)}
+        ItemSeparatorComponent={renderGap}
+        renderItem={({ item: col, index: colIndex }) => (
+          <View style={{ width: colWidth }}>
+            {col.map((song, i) => (
+              <TouchableOpacity
+                key={song.id}
+                style={styles.row}
+                activeOpacity={0.8}
+                onPress={() => onPlay(songs, colIndex * rows + i)}
+              >
+                <Cover song={song} size={52} radius={6} />
+                <View style={styles.rowMid}>
+                  <Text style={styles.rowTitle} numberOfLines={1} ellipsizeMode="tail">
+                    {song.title}
+                  </Text>
+                  <Text style={styles.rowSub} numberOfLines={1} ellipsizeMode="tail">
+                    {song.artist} • {formatCount(song, unit)}
+                  </Text>
+                </View>
+                <View style={styles.rowMenu}>
+                  <Ionicons name="ellipsis-vertical" size={18} color={MOON.textDim} />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      />
+    </View>
+  );
+});
+
+// ---------- Arrangement 2: 16:9 video carousel ----------
+const VideoSection = memo(function VideoSection({
+  title,
+  subtitle,
+  songs,
+  onPlay,
+  onPlayAll,
+}: {
+  title: string;
+  subtitle?: string;
+  songs: Song[];
+  onPlay: (songs: Song[], index: number) => void;
+  onPlayAll: (songs: Song[]) => void;
+}) {
+  const { width } = useWindowDimensions();
+  const cardWidth = Math.round(width * 0.78);
+  const thumbH = Math.round((cardWidth * 9) / 16);
+
+  if (!songs.length) return null;
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader title={title} subtitle={subtitle} onPlayAll={() => onPlayAll(songs)} />
       <FlatList
         data={songs}
         horizontal
         showsHorizontalScrollIndicator={false}
+        snapToInterval={cardWidth + GAP}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        disableIntervalMomentum
+        nestedScrollEnabled
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
         keyExtractor={(song) => song.id}
-        contentContainerStyle={{ paddingHorizontal: 20 }}
+        ItemSeparatorComponent={renderGap}
         renderItem={({ item, index }) => (
           <TouchableOpacity
-            style={styles.card}
-            activeOpacity={0.85}
-            onPress={() => onPlay(index)}
+            style={{ width: cardWidth }}
+            activeOpacity={0.9}
+            onPress={() => onPlay(songs, index)}
           >
-            <Cover song={item} size={150} radius={24} />
-            <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-            <Text style={styles.cardSub} numberOfLines={2}>{item.artist}</Text>
+            <View style={[styles.videoThumb, { height: thumbH }]}>
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  top: -(cardWidth - thumbH) / 2,
+                  left: 0,
+                  opacity: 0.45,
+                }}
+              >
+                <Cover song={item} size={cardWidth} radius={0} />
+              </View>
+              <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+                <LinearGradient
+                  colors={['rgba(8,6,15,0.55)', 'rgba(8,6,15,0.85)']}
+                  style={StyleSheet.absoluteFill}
+                />
+              </View>
+              <View style={styles.videoArt}>
+                <Cover song={item} size={thumbH} radius={8} />
+              </View>
+              <View style={styles.videoPlayBadge}>
+                <Ionicons name="play" size={16} color="#1b1040" style={{ marginLeft: 2 }} />
+              </View>
+            </View>
+            <Text style={styles.videoTitle} numberOfLines={1} ellipsizeMode="tail">
+              {item.title}
+            </Text>
+            <Text style={styles.videoSub} numberOfLines={1} ellipsizeMode="tail">
+              {item.artist} • {formatCount(item, 'views')}
+            </Text>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
+  );
+});
+
+// ---------- Arrangement 3: square album / playlist carousel ----------
+const SquareSection = memo(function SquareSection({
+  title,
+  subtitle,
+  songs,
+  onPlay,
+  onPlayAll,
+}: {
+  title: string;
+  subtitle?: string;
+  songs: Song[];
+  onPlay: (songs: Song[], index: number) => void;
+  onPlayAll: (songs: Song[]) => void;
+}) {
+  const { width } = useWindowDimensions();
+  const cardWidth = Math.round(width * 0.43);
+
+  if (!songs.length) return null;
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader title={title} subtitle={subtitle} onPlayAll={() => onPlayAll(songs)} />
+      <FlatList
+        data={songs}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        nestedScrollEnabled
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
+        keyExtractor={(song) => song.id}
+        ItemSeparatorComponent={renderGap}
+        renderItem={({ item, index }) => (
+          <TouchableOpacity
+            style={{ width: cardWidth }}
+            activeOpacity={0.85}
+            onPress={() => onPlay(songs, index)}
+          >
+            <View style={styles.squareThumb}>
+              <Cover song={item} size={cardWidth} radius={8} />
+            </View>
+            <Text style={styles.squareTitle} numberOfLines={1} ellipsizeMode="tail">
+              {item.title}
+            </Text>
+            <Text style={styles.squareSub} numberOfLines={2} ellipsizeMode="tail">
+              {item.artist}
+            </Text>
           </TouchableOpacity>
         )}
       />
@@ -112,6 +372,25 @@ export default function HomeScreen() {
   const { songs, loading, error } = useLibrary();
   const { current } = usePlayback();
   const playing = usePlaying();
+  const shuffledSongs = useMemo(() => shuffleSongs(songs), [songs]);
+
+  // Dynamically match songs to chosen mood, with graceful fallback to shuffled songs (limited to 4 songs for the 1st row)
+  const mood = MOODS.find((m) => m.id === moodId) ?? MOODS[0];
+  const hits = useMemo(() => {
+    const keywords = TAG_SYNONYMS[mood.id] ?? [mood.id];
+    const matched = songs.filter((s) => {
+      const text = `${s.title} ${s.artist}`.toLowerCase();
+      return keywords.some((k) => text.includes(k));
+    });
+    return matched.length >= 2 ? pick(matched, 0, 4) : pick(shuffledSongs, 0, 4);
+  }, [mood.id, songs, shuffledSongs]);
+
+  const romance = useMemo(() => pick(shuffledSongs, 10, 10), [shuffledSongs]);
+  // 4 rows x 3 columns = 12 songs for Quick picks
+  const quickPicks = useMemo(() => pick(shuffledSongs, 3, 12), [shuffledSongs]);
+  const videos = useMemo(() => pick(shuffledSongs, 7, 8), [shuffledSongs]);
+  const shorts = useMemo(() => pick(shuffledSongs, 12, 12), [shuffledSongs]);
+  const mashups = useMemo(() => pick(shuffledSongs, 20, 12), [shuffledSongs]);
 
   useEffect(() => {
     const state = playerStore.getState();
@@ -123,13 +402,13 @@ export default function HomeScreen() {
     }
   }, []);
 
-  const mood = MOODS.find((m) => m.id === moodId) ?? MOODS[0];
-
-  const playSong = useCallback((index: number) => {
-    if (!songs[index]) return;
-    playerStore.playQueue(songs, index);
+  const playFrom = useCallback((list: Song[], index: number) => {
+    if (!list[index]) return;
+    playerStore.playQueue(list, index);
     router.push('/player');
-  }, [router, songs]);
+  }, [router]);
+
+  const playAll = useCallback((list: Song[]) => playFrom(list, 0), [playFrom]);
 
   return (
     <LinearGradient
@@ -142,7 +421,7 @@ export default function HomeScreen() {
 
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={{ paddingBottom: current ? 110 : 80 }}
         >
           {/* Header */}
           <View style={styles.header}>
@@ -163,6 +442,7 @@ export default function HomeScreen() {
               disabled={loading}
               accessibilityRole="button"
               accessibilityLabel="Refresh songs and dashboard updates"
+              hitSlop={8}
             >
               {loading ? (
                 <ActivityIndicator size="small" color={MOON.primarySoft} />
@@ -179,6 +459,7 @@ export default function HomeScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.moodRow}
+            nestedScrollEnabled
           >
             {MOODS.map((m) => {
               const active = m.id === moodId;
@@ -216,22 +497,20 @@ export default function HomeScreen() {
               if (current) {
                 router.push('/player');
               } else {
-                playSong(0);
+                playFrom(shuffledSongs, 0);
               }
             }}
             style={styles.heroWrap}
           >
-            <LinearGradient
-              colors={mood.grad}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.hero}
-            >
-              <Ionicons
-                name="moon"
-                size={150}
-                color="rgba(255,255,255,0.14)"
-                style={styles.heroMoon}
+            <View style={styles.hero}>
+              <Image
+                source={require('@/assets/images/moonlight-banner.png')}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+              />
+              <LinearGradient
+                colors={['rgba(8,6,15,0.12)', 'rgba(8,6,15,0.78)']}
+                style={StyleSheet.absoluteFill}
               />
               <Text style={styles.heroSmall}>
                 {current ? 'NOW PLAYING' : 'YOUR SONGS'}
@@ -253,12 +532,65 @@ export default function HomeScreen() {
                   {current ? 'Open player' : songs.length ? 'Play now' : 'No songs yet'}
                 </Text>
               </View>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
 
-          {songs.length > 0 && (
-            <SongSection title="All songs" songs={songs} onPlay={playSong} />
-          )}
+          {/* Arrangement 3: square carousels at the very top */}
+          <SquareSection
+            title="Hits for you"
+            subtitle={mood.title.toUpperCase()}
+            songs={hits}
+            onPlay={playFrom}
+            onPlayAll={playAll}
+          />
+          <SquareSection
+            title="Bollywood Romance"
+            subtitle="HANDPICKED"
+            songs={romance}
+            onPlay={playFrom}
+            onPlayAll={playAll}
+          />
+
+          {/* Arrangement 1: paginated grids */}
+          <GridSection
+            title="Quick picks"
+            subtitle="START RADIO FROM A SONG"
+            songs={quickPicks}
+            rows={4}
+            columnsCount={3}
+            unit="plays"
+            onPlay={playFrom}
+            onPlayAll={playAll}
+          />
+
+          {/* Arrangement 2: 16:9 video carousel */}
+          <VideoSection
+            title="Music videos for you"
+            subtitle="WATCH & LISTEN"
+            songs={videos}
+            onPlay={playFrom}
+            onPlayAll={playAll}
+          />
+
+          <GridSection
+            title="Heard in Shorts"
+            subtitle="TRENDING NOW"
+            songs={shorts}
+            rows={2}
+            unit="views"
+            onPlay={playFrom}
+            onPlayAll={playAll}
+          />
+          <GridSection
+            title="Top Mashups"
+            subtitle="BEST OF BOTH WORLDS"
+            songs={mashups}
+            rows={2}
+            unit="plays"
+            onPlay={playFrom}
+            onPlayAll={playAll}
+          />
+
           {!loading && !songs.length && (
             <View style={styles.emptyLibrary}>
               <Ionicons name={error ? 'cloud-offline-outline' : 'musical-notes-outline'} size={28} color={MOON.primarySoft} />
@@ -266,12 +598,30 @@ export default function HomeScreen() {
                 {error || 'No songs found in your shared Drive folder.'}
               </Text>
               {!!error && (
-                <TouchableOpacity onPress={() => void playerStore.loadSongs(true)}>
+                <TouchableOpacity onPress={() => void playerStore.loadSongs(true)} hitSlop={10}>
                   <Text style={styles.retryText}>Try again</Text>
                 </TouchableOpacity>
               )}
             </View>
           )}
+          {/* Footer */}
+          <View style={styles.footer}>
+            <View style={styles.footerDivider} />
+            <View style={styles.footerBrand}>
+              <Image
+                source={require('@/assets/images/moonlight-logo.png')}
+                style={styles.footerLogo}
+                contentFit="contain"
+              />
+              <Text style={styles.footerBrandName}>MOONLIGHT</Text>
+            </View>
+            <Text style={styles.footerCopyright}>
+              © {new Date().getFullYear()} MOONLIGHT • All rights reserved
+            </Text>
+            <Text style={styles.footerCredit}>
+              Developed by <Text style={styles.footerAuthor}>Anish Kumawat</Text>
+            </Text>
+          </View>
         </ScrollView>
 
         {current && (
@@ -297,6 +647,7 @@ export default function HomeScreen() {
                 accessibilityLabel={playing ? 'Pause song' : 'Play song'}
                 style={styles.miniPlay}
                 onPress={() => playerStore.toggle()}
+                hitSlop={8}
               >
                 <Ionicons
                   name={playing ? 'pause' : 'play'}
@@ -381,11 +732,10 @@ const styles = StyleSheet.create({
   hero: {
     borderRadius: 28,
     padding: 22,
-    minHeight: 170,
+    height: 200,
     overflow: 'hidden',
     justifyContent: 'flex-end',
   },
-  heroMoon: { position: 'absolute', right: -20, top: -20 },
   heroSmall: { color: 'rgba(255,255,255,0.8)', fontSize: 11, letterSpacing: 2 },
   heroTitle: { color: '#fff', fontSize: 26, fontWeight: 'bold', marginTop: 6 },
   heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4 },
@@ -401,17 +751,93 @@ const styles = StyleSheet.create({
   },
   heroBtnText: { color: '#1b1040', fontWeight: 'bold', fontSize: 13, marginLeft: 6 },
 
+  // ----- Sections -----
   section: { marginTop: 28 },
-  sectionTitle: {
-    color: MOON.text,
-    fontSize: 20,
-    fontWeight: 'bold',
-    paddingHorizontal: 20,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SIDE_PAD,
     marginBottom: 14,
   },
-  card: { width: 150, marginRight: 16 },
-  cardTitle: { color: MOON.text, fontSize: 14, fontWeight: 'bold', marginTop: 10 },
-  cardSub: { color: MOON.textDim, fontSize: 12, marginTop: 2 },
+  sectionKicker: {
+    color: MOON.textDim,
+    fontSize: 10,
+    letterSpacing: 1.6,
+    marginBottom: 2,
+  },
+  sectionTitle: {
+    color: MOON.text,
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  playAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: MOON.primarySoft,
+    backgroundColor: 'rgba(139,92,246,0.08)',
+  },
+  playAllText: { color: MOON.primarySoft, fontSize: 12, fontWeight: '700', marginLeft: 6 },
+
+  // Arrangement 1 – song row
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 64,
+  },
+  rowMid: { flex: 1, marginHorizontal: 12, overflow: 'hidden' },
+  rowTitle: { color: MOON.text, fontSize: 15, fontWeight: '600' },
+  rowSub: { color: MOON.textDim, fontSize: 12, marginTop: 3 },
+  rowMenu: { paddingLeft: 4, justifyContent: 'center', alignItems: 'flex-end' },
+
+  // Arrangement 2 – 16:9 video card
+  videoThumb: {
+    width: '100%',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: MOON.card,
+    borderWidth: 1,
+    borderColor: MOON.cardBorder,
+  },
+  videoArt: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoPlayBadge: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoTitle: { color: MOON.text, fontSize: 14, fontWeight: 'bold', marginTop: 8 },
+  videoSub: { color: MOON.textDim, fontSize: 12, marginTop: 2 },
+
+  // Arrangement 3 – square card
+  squareThumb: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    elevation: 6,
+    shadowColor: MOON.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  squareTitle: { color: MOON.text, fontSize: 14, fontWeight: 'bold', marginTop: 10 },
+  squareSub: { color: MOON.textDim, fontSize: 12, marginTop: 2 },
 
   emptyLibrary: {
     alignItems: 'center',
@@ -452,5 +878,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  footer: {
+    marginTop: 40,
+    marginBottom: 16,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  footerDivider: {
+    width: '100%',
+    height: 1,
+    backgroundColor: 'rgba(167,139,250,0.12)',
+    marginBottom: 20,
+  },
+  footerBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  footerLogo: {
+    width: 22,
+    height: 22,
+    marginRight: 8,
+    opacity: 0.85,
+  },
+  footerBrandName: {
+    color: MOON.text,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  footerCopyright: {
+    color: MOON.textDim,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  footerCredit: {
+    color: MOON.textDim,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  footerAuthor: {
+    color: MOON.primarySoft,
+    fontWeight: '600',
   },
 });

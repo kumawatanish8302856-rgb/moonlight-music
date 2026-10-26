@@ -58,7 +58,6 @@ const CATEGORIES: Category[] = [
   { id: '10', title: 'Pop', tag: 'pop', icon: 'sparkles', grad: G.primary },
 ];
 
-// masonry columns: component ke bahar, taaki har render par dobara na bane
 const HEIGHTS = [130, 100, 115, 140, 105];
 const LEFT = CATEGORIES.filter((_, i) => i % 2 === 0);
 const RIGHT = CATEGORIES.filter((_, i) => i % 2 === 1);
@@ -106,8 +105,8 @@ const SongRow = memo(function SongRow({
   index: number;
   onPlay: (i: number) => void;
 }) {
-  const [thumbFailed, setThumbFailed] = useState(false);
-  const showThumb = !!song.thumb && !thumbFailed;
+  const [failedThumbUri, setFailedThumbUri] = useState<string | null>(null);
+  const showThumb = !!song.thumb && failedThumbUri !== song.thumb;
 
   return (
     <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => onPlay(index)}>
@@ -115,8 +114,10 @@ const SongRow = memo(function SongRow({
         <Image
           source={{ uri: song.thumb }}
           style={styles.thumb}
-          onError={() => setThumbFailed(true)}
           contentFit="cover"
+          transition={150}
+          cachePolicy="memory-disk"
+          onError={() => setFailedThumbUri(song.thumb ?? null)}
         />
       ) : (
         <View style={[styles.thumb, styles.thumbPlaceholder]}>
@@ -158,7 +159,6 @@ export default function SearchScreen() {
     'Love songs',
   ]);
 
-  // purani request ka result nayi ko overwrite na kare
   const reqId = useRef(0);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -196,10 +196,10 @@ export default function SearchScreen() {
         );
         if (id !== reqId.current) return;
         setResults(list);
-      } catch (error) {
+      } catch (err) {
         if (id !== reqId.current) return;
         setResults(null);
-        setError(songsErrorMessage(error));
+        setError(songsErrorMessage(err));
       } finally {
         if (id === reqId.current) setLoading(false);
       }
@@ -237,7 +237,6 @@ export default function SearchScreen() {
     [addRecent]
   );
 
-  // mood chip: us category ke random songs
   const runTag = useCallback(async (c: Category) => {
     Keyboard.dismiss();
     const id = ++reqId.current;
@@ -253,10 +252,10 @@ export default function SearchScreen() {
       );
       if (id !== reqId.current) return;
       setResults(list);
-    } catch (error) {
+    } catch (err) {
       if (id !== reqId.current) return;
       setResults(null);
-      setError(songsErrorMessage(error));
+      setError(songsErrorMessage(err));
     } finally {
       if (id === reqId.current) setLoading(false);
     }
@@ -274,9 +273,9 @@ export default function SearchScreen() {
   const playSong = useCallback(
     (index: number) => {
       if (!results?.length) return;
-    Keyboard.dismiss();
-    playerStore.playQueue(results, index);
-    router.push('/player');
+      Keyboard.dismiss();
+      playerStore.playQueue(results, index);
+      router.push('/player');
     },
     [results, router]
   );
@@ -291,7 +290,16 @@ export default function SearchScreen() {
     }
   }, [mode, query, runTag]);
 
-  const playAll = useCallback(() => playSong(0), [playSong]);
+  const onHeaderPlayPress = useCallback(() => {
+    if (!results?.length) return;
+    Keyboard.dismiss();
+    if (mode === 'tag') {
+      playerStore.playShuffled(results);
+    } else {
+      playerStore.playQueue(results, 0);
+    }
+    router.push('/player');
+  }, [results, mode, router]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: Song; index: number }) => (
@@ -314,14 +322,14 @@ export default function SearchScreen() {
           {results ? `  •  ${results.length}` : ''}
         </Text>
         {!!results?.length && (
-          <TouchableOpacity style={styles.playAll} onPress={playAll} activeOpacity={0.85}>
-            <Ionicons name="play" size={14} color="#1b1040" />
+          <TouchableOpacity style={styles.playAll} onPress={onHeaderPlayPress} activeOpacity={0.85}>
+            <Ionicons name={mode === 'tag' ? 'shuffle' : 'play'} size={14} color="#1b1040" />
             <Text style={styles.playAllText}>{mode === 'tag' ? 'Shuffle play' : 'Play all'}</Text>
           </TouchableOpacity>
         )}
       </View>
     ),
-    [mode, query, results, playAll]
+    [mode, query, results, onHeaderPlayPress]
   );
 
   return (
@@ -372,15 +380,15 @@ export default function SearchScreen() {
             ListEmptyComponent={
               <View style={styles.center}>
                 <Ionicons name="moon-outline" size={40} color={MOON.primarySoft} />
-                <Text style={styles.centerText}>Kuch nahi mila: {query}</Text>
+                <Text style={styles.centerText}>No songs found for: {query}</Text>
               </View>
             }
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
-            initialNumToRender={12}
+            initialNumToRender={10}
             maxToRenderPerBatch={10}
-            windowSize={8}
+            windowSize={6}
             removeClippedSubviews
             contentContainerStyle={{ paddingBottom: 24, paddingTop: 8 }}
           />
@@ -393,7 +401,7 @@ export default function SearchScreen() {
             {loading && (
               <View style={styles.center}>
                 <ActivityIndicator size="large" color={MOON.primary} />
-                <Text style={styles.centerText}>Songs dhoondh rahe hain...</Text>
+                <Text style={styles.centerText}>Searching songs...</Text>
               </View>
             )}
 
@@ -401,7 +409,7 @@ export default function SearchScreen() {
               <View style={styles.center}>
                 <Ionicons name="cloud-offline-outline" size={40} color={MOON.primarySoft} />
                 <Text style={styles.centerText}>{error}</Text>
-                <TouchableOpacity style={styles.retry} onPress={retry}>
+                <TouchableOpacity style={styles.retry} onPress={retry} hitSlop={8}>
                   <Text style={styles.retryText}>Try again</Text>
                 </TouchableOpacity>
               </View>

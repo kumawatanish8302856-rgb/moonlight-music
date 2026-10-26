@@ -16,7 +16,8 @@ export async function loadUserProfile(): Promise<UserProfile | null> {
   try {
     value = JSON.parse(stored);
   } catch {
-    throw new Error('Saved profile data could not be read.');
+    await AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+    return null;
   }
 
   if (
@@ -25,17 +26,18 @@ export async function loadUserProfile(): Promise<UserProfile | null> {
     !('name' in value) ||
     !('dateOfBirth' in value) ||
     !('phone' in value) ||
-    typeof value.name !== 'string' ||
-    typeof value.dateOfBirth !== 'string' ||
-    typeof value.phone !== 'string'
+    typeof (value as any).name !== 'string' ||
+    typeof (value as any).dateOfBirth !== 'string' ||
+    typeof (value as any).phone !== 'string'
   ) {
-    throw new Error('Saved profile data has an invalid format.');
+    await AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+    return null;
   }
 
   return {
-    name: value.name,
-    dateOfBirth: value.dateOfBirth,
-    phone: value.phone,
+    name: (value as any).name,
+    dateOfBirth: (value as any).dateOfBirth,
+    phone: (value as any).phone,
   };
 }
 

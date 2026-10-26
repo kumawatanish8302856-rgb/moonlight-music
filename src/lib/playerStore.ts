@@ -1,8 +1,30 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
+import { Platform } from 'react-native';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { fetchSongs, songsErrorMessage, type Song } from './songs';
+import { recordSongPlayed, recordToSong, useRecentlyPlayed, clearRecentlyPlayed, type RecentlyPlayedRecord } from './recentlyPlayed';
+import {
+  toggleLikeSong,
+  unlikeSong,
+  clearLikedSongs,
+  useLikedSongs,
+  useIsSongLiked,
+  isSongLiked,
+  type LikedSong,
+} from './likedSongs';
 
-export type { Song };
+export type { Song, RecentlyPlayedRecord, LikedSong };
+export {
+  recordToSong,
+  useRecentlyPlayed,
+  clearRecentlyPlayed,
+  toggleLikeSong,
+  unlikeSong,
+  clearLikedSongs,
+  useLikedSongs,
+  useIsSongLiked,
+  isSongLiked,
+};
 
 type State = {
   songs: Song[];
@@ -95,9 +117,31 @@ function set(patch: Partial<State>) {
   listeners.forEach((l) => l());
 }
 
-// ---------- Audio engine (poori app mein ek hi player) ----------
+// ---------- Audio engine (single global player instance) ----------
 export const player: AudioPlayer | null =
   typeof window === 'undefined' ? null : createAudioPlayer(null, { updateInterval: 500 });
+
+// Ensure Web Audio onended properly emits status update so tracks auto-advance
+if (player && Platform.OS === 'web' && typeof window !== 'undefined') {
+  try {
+    const proto = Object.getPrototypeOf(player);
+    if (proto && typeof proto._createMediaElement === 'function' && !(proto as any).__patchedEnded) {
+      (proto as any).__patchedEnded = true;
+      const origCreate = proto._createMediaElement;
+      proto._createMediaElement = function () {
+        const media: HTMLAudioElement = origCreate.call(this);
+        media.addEventListener('ended', () => {
+          this.emit('playbackStatusUpdate', {
+            ...this.currentStatus,
+            didJustFinish: true,
+            playing: false,
+          });
+        });
+        return media;
+      };
+    }
+  } catch {}
+}
 
 if (player) {
   setAudioModeAsync({
@@ -108,13 +152,29 @@ if (player) {
 }
 
 let handledFinishFor = '';
+let recordedPlaybackFor = '';
+
+function safePlay() {
+  if (!player) return;
+  try {
+    const res: unknown = player.play();
+    if (res && typeof (res as { catch?: unknown }).catch === 'function') {
+      (res as { catch: (fn: () => void) => void }).catch(() => {});
+    }
+  } catch {}
+}
 
 function loadCurrent() {
   const song = state.queue[state.index];
   if (!song || !player) return;
   handledFinishFor = '';
-  player.replace({ uri: song.audioUrl });
-  player.play();
+  recordedPlaybackFor = '';
+  try {
+    player.replace({ uri: song.audioUrl });
+    safePlay();
+  } catch (err) {
+    console.warn('Playback error:', err);
+  }
   try {
     player.setActiveForLockScreen(true, {
       title: song.title,
@@ -141,7 +201,7 @@ function onFinished() {
   if (!player) return;
   if (state.repeat) {
     handledFinishFor = '';
-    player.seekTo(0).then(() => player.play());
+    player.seekTo(0).then(() => safePlay()).catch(() => {});
     return;
   }
   const i = pickIndex(false);
@@ -150,12 +210,27 @@ function onFinished() {
     loadCurrent();
   } else {
     player.pause();
-    player.seekTo(0);
+    player.seekTo(0).catch(() => {});
   }
 }
 
 player?.addListener('playbackStatusUpdate', (status) => {
-  if (!status.didJustFinish) return;
+  // Record to Recently Played only when playback genuinely begins
+  if (status.isLoaded && status.playing && !status.error) {
+    const cur = state.queue[state.index];
+    if (cur && cur.id && recordedPlaybackFor !== cur.id) {
+      recordedPlaybackFor = cur.id;
+      void recordSongPlayed(cur);
+    }
+  }
+
+  const isFinished =
+    status.didJustFinish ||
+    (status.isLoaded &&
+      status.duration > 0 &&
+      status.currentTime >= status.duration - 0.5 &&
+      !status.playing);
+  if (!isFinished) return;
   const cur = state.queue[state.index];
   if (!cur || handledFinishFor === cur.id) return;
   handledFinishFor = cur.id;
@@ -176,7 +251,7 @@ export const playerStore = {
     if (state.loading || (state.loaded && !force)) return;
     set({ loading: true, error: '' });
     try {
-      const songs = await fetchSongs();
+      const songs = await fetchSongs({ force });
       set({ songs, loading: false, loaded: true });
     } catch (error: unknown) {
       set({ loading: false, loaded: true, error: songsErrorMessage(error) });
@@ -202,9 +277,9 @@ export const playerStore = {
       return;
     }
     if (player.duration > 0 && player.currentTime >= player.duration - 0.5) {
-      player.seekTo(0).then(() => player.play());
+      player.seekTo(0).then(() => safePlay()).catch(() => {});
     } else {
-      player.play();
+      safePlay();
     }
   },
 
@@ -218,7 +293,7 @@ export const playerStore = {
   prev() {
     if (state.index < 0 || !player) return;
     if (player.currentTime > 3 || state.index === 0) {
-      player.seekTo(0);
+      player.seekTo(0).catch(() => {});
       return;
     }
     set({ index: state.index - 1 });
@@ -226,7 +301,7 @@ export const playerStore = {
   },
 
   seek(seconds: number) {
-    player?.seekTo(seconds);
+    player?.seekTo(seconds).catch(() => {});
   },
 
   toggleShuffle() {
@@ -236,8 +311,24 @@ export const playerStore = {
   toggleRepeat() {
     set({ repeat: !state.repeat });
   },
-
 };
+
+if (typeof window !== 'undefined') {
+  (window as any).__playerStore = playerStore;
+  (window as any).__player = player;
+}
+
+if (player && Platform.OS === 'android') {
+  player.addListener('lockScreenPreviousTrack', () => playerStore.prev());
+  player.addListener('lockScreenNextTrack', () => playerStore.next());
+}
+
+if (Platform.OS === 'web' && typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+  try {
+    navigator.mediaSession.setActionHandler('previoustrack', () => playerStore.prev());
+    navigator.mediaSession.setActionHandler('nexttrack', () => playerStore.next());
+  } catch {}
+}
 
 // ---------- React hooks ----------
 export function useLibrary() {
@@ -250,7 +341,7 @@ export function usePlayback() {
   return { ...snapshot, current };
 }
 
-// sirf tab re-render hota hai jab play/pause badle
+// Re-renders only when play/pause status changes
 export function usePlaying() {
   const [playing, setPlaying] = useState(player?.playing ?? false);
   useEffect(() => {

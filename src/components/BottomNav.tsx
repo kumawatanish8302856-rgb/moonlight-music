@@ -19,7 +19,7 @@ const TABS = [
 const BottomNav = memo(function BottomNav({ active }: { active: 'home' | 'search' | 'profile' }) {
   const router = useRouter();
 
-  // Search/Profile par phone ka back dabane se Home khulega
+  // Pressing Android back from Search or Profile routes back to Home
   useEffect(() => {
     if (active === 'home') return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
