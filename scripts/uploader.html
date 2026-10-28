@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Moonlight Mashup – Song Uploader</title>
+<title>Moonlight Studio – Songs, Library & Notification Control</title>
 <style>
   :root {
     --night: #08060f;
@@ -21,7 +21,7 @@
     --glow-strong: rgba(192, 38, 211, 0.35);
     --ok: #4ade80;
     --err: #f87171;
-    --card-bg: rgba(26, 20, 48, 0.75);
+    --card-bg: rgba(26, 20, 48, 0.78);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,27 +41,27 @@
   }
 
   .wrap {
-    max-width: 680px;
+    max-width: 760px;
     margin: 0 auto;
-    padding: 32px 20px;
+    padding: 28px 20px;
   }
 
   /* Header */
   .header {
     text-align: center;
-    margin-bottom: 28px;
+    margin-bottom: 24px;
     position: relative;
   }
 
   .moon-wrap {
     position: relative;
     display: inline-block;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
 
   .moon {
-    width: 64px;
-    height: 64px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: radial-gradient(circle at 35% 35%, #ffffff 0%, #fef3c7 35%, var(--violet-soft) 70%, var(--violet) 100%);
     box-shadow: 0 0 45px 12px rgba(139, 92, 246, 0.5), 0 0 20px 4px rgba(254, 243, 199, 0.4);
@@ -74,41 +74,82 @@
   }
 
   h1 {
-    font-size: 2.1rem;
+    font-size: 2rem;
     font-weight: 800;
     letter-spacing: -0.02em;
     background: linear-gradient(135deg, #ffffff 30%, var(--violet-soft) 80%, var(--accent) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   .sub {
     color: var(--muted);
-    font-size: 0.95rem;
-    max-width: 480px;
+    font-size: 0.92rem;
+    max-width: 520px;
     margin: 0 auto;
   }
 
-  .drive-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    padding: 6px 14px;
-    background: rgba(139, 92, 246, 0.12);
+  /* Navigation Tabs */
+  .nav-tabs {
+    display: flex;
+    background: rgba(18, 13, 34, 0.85);
     border: 1px solid var(--panel-border);
-    border-radius: 999px;
-    font-size: 0.82rem;
-    color: var(--violet-soft);
+    border-radius: 18px;
+    padding: 6px;
+    margin-bottom: 24px;
+    gap: 6px;
   }
 
-  .drive-pill .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--ok);
-    box-shadow: 0 0 8px var(--ok);
+  .tab-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  @media (max-width: 600px) {
+    .nav-tabs { flex-direction: column; }
+  }
+
+  .tab-btn:hover {
+    color: var(--text);
+    background: rgba(139, 92, 246, 0.1);
+  }
+
+  .tab-btn.active {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(192, 38, 211, 0.4));
+    color: #ffffff;
+    box-shadow: 0 4px 18px rgba(139, 92, 246, 0.35);
+    border: 1px solid rgba(167, 139, 250, 0.4);
+  }
+
+  .tab-btn .badge-pill {
+    background: #c026d3;
+    color: #fff;
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+
+  /* Panels */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadeIn 0.25s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   /* Card */
@@ -118,28 +159,19 @@
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border-radius: 24px;
-    padding: 26px;
+    padding: 24px;
     box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
     margin-bottom: 24px;
   }
 
   .card-title {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: var(--text);
     margin-bottom: 18px;
     display: flex;
     align-items: center;
     gap: 10px;
-  }
-
-  .card-title svg {
-    color: var(--violet-soft);
-  }
-
-  /* Fields */
-  .form-group {
-    margin-bottom: 20px;
   }
 
   .form-row {
@@ -168,12 +200,12 @@
   }
 
   .field-hint {
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     color: var(--muted);
     font-weight: 400;
   }
 
-  input[type="text"] {
+  input[type="text"], textarea, select {
     width: 100%;
     padding: 13px 16px;
     border-radius: 14px;
@@ -185,18 +217,20 @@
     transition: all 0.2s ease;
   }
 
-  input[type="text"]:focus {
+  textarea {
+    resize: vertical;
+    min-height: 85px;
+    line-height: 1.5;
+  }
+
+  input[type="text"]:focus, textarea:focus, select:focus {
     outline: none;
     border-color: var(--violet);
     box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
     background: #17112d;
   }
 
-  input[type="text"]::placeholder {
-    color: #635882;
-  }
-
-  /* Mood / Tag selector */
+  /* Tags Grid */
   .tags-title {
     font-size: 0.88rem;
     font-weight: 600;
@@ -233,7 +267,6 @@
   .tag-chip:hover {
     border-color: var(--violet-soft);
     color: var(--text);
-    transform: translateY(-1px);
   }
 
   .tag-chip.active {
@@ -243,11 +276,34 @@
     box-shadow: 0 0 16px rgba(139, 92, 246, 0.4);
   }
 
-  .tag-chip .emoji {
-    font-size: 0.95rem;
+  /* Template Tags Pills */
+  .template-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
   }
 
-  /* File Dropzones */
+  .tmpl-pill {
+    padding: 4px 10px;
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--violet-soft);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+  }
+
+  .tmpl-pill:hover {
+    background: rgba(139, 92, 246, 0.3);
+    color: #ffffff;
+    transform: translateY(-1px);
+  }
+
+  /* Dropzones */
   .drop {
     position: relative;
     display: flex;
@@ -261,382 +317,220 @@
     transition: all 0.2s ease;
   }
 
-  .drop:hover {
-    border-color: var(--violet-soft);
-    background: #17112d;
-  }
-
-  .drop.over {
-    border-color: var(--accent);
-    background: rgba(139, 92, 246, 0.15);
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
-  }
-
-  .drop.filled {
-    border-style: solid;
-    border-color: rgba(139, 92, 246, 0.5);
-    background: rgba(26, 20, 48, 0.9);
-  }
-
-  .drop input[type="file"] {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-    width: 100%;
-    height: 100%;
-    z-index: 2;
-  }
+  .drop:hover { border-color: var(--violet-soft); background: #17112d; }
+  .drop.filled { border-style: solid; border-color: rgba(139, 92, 246, 0.5); background: rgba(26, 20, 48, 0.9); }
+  .drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; z-index: 2; }
 
   .thumb {
-    width: 80px;
-    height: 80px;
-    border-radius: 14px;
-    flex: none;
+    width: 76px; height: 76px; border-radius: 14px; flex: none;
     background: #251b42 center/cover no-repeat;
-    display: grid;
-    place-items: center;
-    color: var(--muted);
-    font-size: 0.78rem;
-    text-align: center;
+    display: grid; place-items: center; color: var(--muted); font-size: 0.78rem;
     border: 1px solid var(--line);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
   }
 
   .note-icon {
-    width: 80px;
-    height: 80px;
-    border-radius: 14px;
-    flex: none;
+    width: 76px; height: 76px; border-radius: 14px; flex: none;
     background: linear-gradient(135deg, #251b42, #392468);
-    display: grid;
-    place-items: center;
-    font-size: 2rem;
-    color: var(--violet-soft);
+    display: grid; place-items: center; font-size: 2rem; color: var(--violet-soft);
     border: 1px solid var(--line);
   }
 
-  .drop-info {
-    flex: 1;
-    min-width: 0;
-  }
+  .drop-info { flex: 1; min-width: 0; }
+  .drop-title { font-weight: 700; font-size: 0.95rem; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .drop-sub { font-size: 0.8rem; color: var(--muted); }
 
-  .drop-title {
-    font-weight: 700;
-    font-size: 0.96rem;
-    color: var(--text);
-    margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .drop-sub {
-    font-size: 0.82rem;
-    color: var(--muted);
-  }
-
-  .drop-badge {
-    display: inline-block;
-    padding: 3px 8px;
-    background: rgba(139, 92, 246, 0.2);
-    border-radius: 6px;
-    font-size: 0.74rem;
-    color: var(--violet-soft);
-    margin-top: 4px;
-    font-weight: 600;
-  }
-
-  /* Audio player inline preview */
-  .audio-preview {
-    margin-top: 14px;
-    padding: 12px 14px;
-    background: #140d28;
-    border-radius: 14px;
-    border: 1px solid var(--line);
-  }
-
-  .audio-preview audio {
-    width: 100%;
-    height: 36px;
-    filter: invert(1) hue-rotate(180deg) saturate(1.5);
-  }
-
-  /* Naming notice */
-  .naming-box {
-    margin: 18px 0;
-    padding: 14px 16px;
-    border-radius: 14px;
-    background: rgba(15, 10, 28, 0.9);
-    border: 1px solid var(--line);
-    font-size: 0.86rem;
-    color: var(--muted);
-    line-height: 1.6;
-  }
-
-  .naming-box b {
-    color: var(--violet-soft);
-    font-weight: 600;
-    word-break: break-all;
-  }
-
-  .naming-preview-tag {
-    display: inline-block;
-    background: rgba(139, 92, 246, 0.2);
-    color: var(--accent);
-    padding: 2px 7px;
-    border-radius: 6px;
-    font-size: 0.76rem;
-    margin-left: 4px;
-    font-weight: 600;
-  }
-
-  /* Moonlight App Card Preview */
+  /* App Preview Card */
   .preview-wrapper {
-    margin-top: 24px;
+    margin-top: 20px;
     background: linear-gradient(145deg, #181131, #0d081f);
     border: 1px solid rgba(139, 92, 246, 0.3);
     border-radius: 20px;
-    padding: 18px;
+    padding: 16px;
     position: relative;
-    overflow: hidden;
   }
 
   .preview-badge {
-    position: absolute;
-    top: 12px;
-    right: 14px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--moon);
-    background: rgba(254, 243, 199, 0.12);
-    border: 1px solid rgba(254, 243, 199, 0.25);
-    padding: 3px 8px;
-    border-radius: 999px;
+    position: absolute; top: 12px; right: 14px; font-size: 0.72rem; font-weight: 700;
+    color: var(--moon); background: rgba(254, 243, 199, 0.12); border: 1px solid rgba(254, 243, 199, 0.25);
+    padding: 2px 8px; border-radius: 999px;
   }
 
-  .app-card-demo {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
+  .app-card-demo { display: flex; align-items: center; gap: 14px; }
   .app-art {
-    width: 68px;
-    height: 68px;
-    border-radius: 14px;
-    background: #251b42 center/cover no-repeat;
-    flex: none;
-    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
-    display: grid;
-    place-items: center;
-    font-size: 1.4rem;
-    color: var(--violet-soft);
+    width: 64px; height: 64px; border-radius: 12px; background: #251b42 center/cover no-repeat;
+    flex: none; box-shadow: 0 6px 18px rgba(139, 92, 246, 0.35); display: grid; place-items: center;
+    font-size: 1.4rem; color: var(--violet-soft);
   }
+  .app-meta { flex: 1; min-width: 0; }
+  .app-song-title { font-size: 1rem; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .app-song-artist { font-size: 0.84rem; color: var(--violet-soft); margin-top: 2px; }
+  .app-song-shelves { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .app-shelf-pill { font-size: 0.7rem; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: rgba(139, 92, 246, 0.25); color: var(--text); }
 
-  .app-meta {
-    flex: 1;
-    min-width: 0;
+  /* Notification Mockup */
+  .phone-mockup {
+    margin-top: 20px; background: #090611; border: 1.5px solid rgba(139, 92, 246, 0.35);
+    border-radius: 24px; padding: 16px; position: relative; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
   }
+  .phone-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: var(--muted); margin-bottom: 12px; padding: 0 4px; }
+  .notif-card-demo { background: rgba(26, 20, 48, 0.95); border: 1px solid rgba(167, 139, 250, 0.3); border-radius: 18px; padding: 14px; }
+  .notif-demo-top { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; }
+  .notif-demo-logo { width: 18px; height: 18px; border-radius: 5px; background: radial-gradient(circle, #fff, var(--violet)); display: grid; place-items: center; font-size: 10px; }
+  .notif-demo-appname { font-weight: 800; color: #fef3c7; }
+  .notif-demo-body { display: flex; gap: 12px; align-items: flex-start; }
+  .notif-demo-text { flex: 1; min-width: 0; }
+  .notif-demo-title { font-size: 0.96rem; font-weight: 700; color: #ffffff; margin-bottom: 3px; }
+  .notif-demo-tagline { font-size: 0.84rem; color: #d8b4fe; line-height: 1.4; }
+  .notif-demo-image { width: 60px; height: 60px; border-radius: 10px; background: #251b42 center/cover no-repeat; flex: none; border: 1px solid var(--panel-border); }
+  .name-switcher { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 0.78rem; color: var(--muted); }
+  .name-pill { padding: 2px 8px; border-radius: 6px; background: var(--night-soft); border: 1px solid var(--line); cursor: pointer; }
+  .name-pill.active { background: var(--violet); color: #fff; border-color: var(--violet); }
 
-  .app-song-title {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #ffffff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .app-song-artist {
-    font-size: 0.85rem;
-    color: var(--violet-soft);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-top: 2px;
-  }
-
-  .app-song-shelves {
-    display: flex;
-    gap: 6px;
-    margin-top: 6px;
-    flex-wrap: wrap;
-  }
-
-  .app-shelf-pill {
-    font-size: 0.72rem;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 6px;
-    background: rgba(139, 92, 246, 0.25);
-    color: var(--text);
-  }
-
-  /* Button */
+  /* Buttons */
   button.go {
-    width: 100%;
-    padding: 16px 24px;
-    border: 0;
-    border-radius: 16px;
-    cursor: pointer;
-    font: inherit;
-    font-size: 1.05rem;
-    font-weight: 800;
-    letter-spacing: 0.01em;
-    color: #0d081f;
+    width: 100%; padding: 15px 24px; border: 0; border-radius: 16px; cursor: pointer; font: inherit;
+    font-size: 1.05rem; font-weight: 800; color: #0d081f;
     background: linear-gradient(135deg, #ffffff 0%, var(--violet-soft) 40%, #c026d3 100%);
-    box-shadow: 0 10px 30px -5px rgba(139, 92, 246, 0.5);
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 22px;
+    box-shadow: 0 10px 30px -5px rgba(139, 92, 246, 0.5); transition: all 0.2s ease;
+    display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 20px;
   }
+  button.go:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 35px -4px rgba(192, 38, 211, 0.6); }
+  button.go:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
 
-  button.go:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 14px 35px -4px rgba(192, 38, 211, 0.6);
+  button.secondary-btn {
+    width: 100%; padding: 12px 20px; border: 1px solid var(--line); border-radius: 14px; cursor: pointer;
+    font: inherit; font-size: 0.9rem; font-weight: 600; color: var(--muted); background: transparent;
+    transition: all 0.15s ease; margin-top: 10px;
   }
-
-  button.go:active:not(:disabled) {
-    transform: translateY(0);
-  }
-
-  button.go:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
-  }
+  button.secondary-btn:hover { color: var(--err); border-color: var(--err); background: rgba(248, 113, 113, 0.1); }
 
   /* Status */
-  .status {
-    margin-top: 16px;
-    min-height: 1.5em;
-    font-size: 0.94rem;
-    text-align: center;
-    padding: 10px 14px;
-    border-radius: 12px;
-    display: none;
-  }
-
+  .status { margin-top: 16px; font-size: 0.92rem; text-align: center; padding: 11px 14px; border-radius: 12px; display: none; }
   .status.show { display: block; }
   .status.info { background: rgba(139, 92, 246, 0.15); color: var(--violet-soft); border: 1px solid var(--panel-border); }
   .status.ok { background: rgba(74, 222, 128, 0.15); color: var(--ok); border: 1px solid rgba(74, 222, 128, 0.3); }
   .status.err { background: rgba(248, 113, 113, 0.15); color: var(--err); border: 1px solid rgba(248, 113, 113, 0.3); }
 
-  /* Results section */
-  .results {
-    margin-top: 36px;
+  /* =========================================
+     TAB 3: ALL SONGS MANAGER STYLES
+     ========================================= */
+  .manager-bar {
+    display: flex; gap: 12px; margin-bottom: 18px; align-items: center; flex-wrap: wrap;
+  }
+  .search-input-wrap {
+    flex: 1; min-width: 220px; position: relative;
+  }
+  .search-input-wrap input {
+    padding-left: 40px;
+  }
+  .search-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); pointer-events: none;
+  }
+  .stats-badge {
+    padding: 10px 16px; background: rgba(139, 92, 246, 0.15); border: 1px solid var(--panel-border);
+    border-radius: 14px; font-size: 0.88rem; font-weight: 700; color: var(--violet-soft);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .refresh-btn {
+    padding: 10px 14px; background: var(--night-soft); border: 1px solid var(--line);
+    border-radius: 14px; color: var(--text); font-weight: 700; cursor: pointer; transition: all 0.15s ease;
+  }
+  .refresh-btn:hover { border-color: var(--violet-soft); color: #fff; }
+
+  .song-manage-list {
+    display: flex; flex-direction: column; gap: 12px;
   }
 
-  .results-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 14px;
+  .manage-card {
+    display: flex; align-items: center; gap: 16px; padding: 14px;
+    background: var(--night-soft); border: 1px solid var(--line); border-radius: 18px;
+    transition: all 0.2s ease; position: relative;
+  }
+  .manage-card:hover {
+    border-color: rgba(167, 139, 250, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   }
 
-  .results h2 {
-    font-size: 1.25rem;
-    font-weight: 700;
+  .manage-cover {
+    width: 64px; height: 64px; border-radius: 12px; background: #251b42 center/cover no-repeat;
+    flex: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid var(--panel-border);
   }
 
-  .song-card {
-    display: grid;
-    grid-template-columns: 80px 1fr;
-    gap: 16px;
-    padding: 16px;
-    margin-bottom: 14px;
-    background: var(--card-bg);
-    border: 1px solid var(--panel-border);
-    border-radius: 18px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  .manage-info {
+    flex: 1; min-width: 0;
   }
 
-  .song-card img {
-    width: 80px;
-    height: 80px;
-    border-radius: 12px;
-    object-fit: cover;
-    background: #251b42;
+  .manage-title {
+    font-size: 1rem; font-weight: 700; color: #ffffff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
-  .song-card .t {
-    font-weight: 700;
-    font-size: 1.05rem;
-    color: #ffffff;
+  .manage-artist {
+    font-size: 0.84rem; color: var(--violet-soft); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
-  .song-card .a {
-    font-size: 0.88rem;
-    color: var(--violet-soft);
-    margin-top: 2px;
+  .manage-tags {
+    display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;
   }
 
-  .song-card .id-pill {
-    display: inline-block;
-    margin-top: 6px;
-    font-size: 0.76rem;
-    color: var(--muted);
-    background: var(--night-soft);
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-family: monospace;
+  .manage-tag-badge {
+    font-size: 0.72rem; padding: 2px 7px; border-radius: 6px;
+    background: rgba(139, 92, 246, 0.2); color: #d8b4fe; font-weight: 600;
   }
 
-  .copy-grid {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-    flex-wrap: wrap;
+  .manage-actions {
+    display: flex; align-items: center; gap: 8px; flex: none;
   }
 
-  .copy-grid button {
-    padding: 7px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--line);
-    background: var(--night-soft);
-    color: var(--text);
-    font: inherit;
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s ease;
+  .action-btn {
+    padding: 8px 12px; border-radius: 10px; font-size: 0.82rem; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--line); background: rgba(26, 20, 48, 0.8);
+    color: var(--text); transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px;
   }
+  .action-btn:hover { border-color: var(--violet-soft); color: #fff; transform: translateY(-1px); }
+  .action-btn.delete { color: #fca5a5; }
+  .action-btn.delete:hover { border-color: var(--err); background: rgba(248, 113, 113, 0.15); color: #fff; }
 
-  .copy-grid button:hover {
-    border-color: var(--violet-soft);
-    background: #231940;
-    color: #ffffff;
+  /* Edit Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(8, 6, 15, 0.85); backdrop-filter: blur(8px);
+    z-index: 99999; display: none; align-items: center; justify-content: center; padding: 20px;
   }
-
-  .app-sync-tip {
-    margin-top: 12px;
-    padding: 10px 14px;
-    background: rgba(74, 222, 128, 0.1);
-    border: 1px solid rgba(74, 222, 128, 0.25);
-    border-radius: 10px;
-    font-size: 0.84rem;
-    color: #bbf7d0;
+  .modal-backdrop.open { display: flex; animation: fadeIn 0.2s ease; }
+  .modal-box {
+    width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto;
+    background: #17112d; border: 1px solid rgba(167, 139, 250, 0.4);
+    border-radius: 24px; padding: 24px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
   }
-
-  /* Spinner */
-  .spinner {
-    width: 20px;
-    height: 20px;
-    border: 2.5px solid rgba(13, 8, 31, 0.3);
-    border-top-color: #0d081f;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+  .modal-head {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
   }
+  .modal-title { font-size: 1.2rem; font-weight: 800; color: #fff; }
+  .modal-close {
+    background: transparent; border: 0; color: var(--muted); font-size: 1.4rem; cursor: pointer; padding: 4px;
+  }
+  .modal-close:hover { color: #fff; }
 
-  @keyframes spin {
-    to { transform: rotate(360deg); }
+  /* Accordion / Script Guide */
+  .code-accordion {
+    margin-top: 24px; background: rgba(18, 13, 34, 0.9); border: 1px solid var(--panel-border);
+    border-radius: 16px; overflow: hidden;
+  }
+  .accordion-head {
+    padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; font-weight: 700; font-size: 0.92rem; color: var(--violet-soft); user-select: none;
+  }
+  .accordion-body { padding: 16px 18px; border-top: 1px solid var(--line); display: none; }
+  .accordion-body.open { display: block; }
+  pre {
+    background: #090611; padding: 14px; border-radius: 12px; font-family: monospace;
+    font-size: 0.8rem; color: #e2e8f0; overflow-x: auto; margin: 10px 0;
+  }
+  .copy-script-btn {
+    padding: 8px 14px; border-radius: 8px; background: var(--violet); border: 0;
+    color: #fff; font-weight: 700; font-size: 0.82rem; cursor: pointer;
   }
 </style>
 </head>
@@ -648,177 +542,866 @@
     <div class="moon-wrap">
       <div class="moon" aria-hidden="true"></div>
     </div>
-    <h1>MOONLIGHT UPLOADER</h1>
-    <p class="sub">Upload mashups & songs directly to Google Drive. Auto-formatted for Moonlight App.</p>
-    <div class="drive-pill">
-      <span class="dot"></span>
-      <span>Drive Folder: <b>1hu1kGOq...3FB7n</b></span>
-    </div>
+    <h1>MOONLIGHT STUDIO</h1>
+    <p class="sub">Manage songs, edit categories & covers, and broadcast push notifications</p>
   </header>
 
-  <!-- Upload Form Card -->
-  <div class="card">
-    <div class="card-title">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-      <span>Song Details & Metadata</span>
-    </div>
-
-    <!-- Inputs row: Title & Artist -->
-    <div class="form-row">
-      <label class="field">
-        <span class="field-label">
-          <span>Song / Mashup Title</span>
-          <span class="field-hint">e.g. Ek Mulaqat X Barbaad</span>
-        </span>
-        <input type="text" id="title" placeholder="Song Title" autocomplete="off">
-      </label>
-
-      <label class="field">
-        <span class="field-label">
-          <span>Artist / DJ / Creator</span>
-          <span class="field-hint">e.g. Love Mashup</span>
-        </span>
-        <input type="text" id="artist" placeholder="Artist or Creator (optional)" autocomplete="off">
-      </label>
-    </div>
-
-    <!-- Mood & Category Selector -->
-    <div class="tags-title">
-      <span>Moonlight App Mood & Category</span>
-      <span class="field-hint">App automatically sorts by these</span>
-    </div>
-
-    <div class="tags-grid" id="tagsGrid">
-      <div class="tag-chip active" data-tag="chill" data-label="Chill">
-        <span class="emoji">🌙</span><span>Chill / Lo-Fi</span>
-      </div>
-      <div class="tag-chip active" data-tag="love" data-label="Romance">
-        <span class="emoji">❤️</span><span>Romance / Love</span>
-      </div>
-      <div class="tag-chip" data-tag="party" data-label="Party">
-        <span class="emoji">🔥</span><span>Midnight Party</span>
-      </div>
-      <div class="tag-chip" data-tag="sad" data-label="Sad">
-        <span class="emoji">🌧️</span><span>Sad / Rainy</span>
-      </div>
-      <div class="tag-chip active" data-tag="mashup" data-label="Mashup">
-        <span class="emoji">🎧</span><span>Mashup / Remix</span>
-      </div>
-      <div class="tag-chip" data-tag="bollywood" data-label="Bollywood">
-        <span class="emoji">🎬</span><span>Bollywood</span>
-      </div>
-      <div class="tag-chip" data-tag="punjabi" data-label="Punjabi">
-        <span class="emoji">🪕</span><span>Punjabi</span>
-      </div>
-      <div class="tag-chip" data-tag="focus" data-label="Focus">
-        <span class="emoji">🧘</span><span>Deep Focus</span>
-      </div>
-      <div class="tag-chip" data-tag="workout" data-label="Workout">
-        <span class="emoji">⚡</span><span>Workout / Beat</span>
-      </div>
-      <div class="tag-chip" data-tag="devotional" data-label="Devotional">
-        <span class="emoji">🌸</span><span>Devotional</span>
-      </div>
-      <div class="tag-chip" data-tag="pop" data-label="Pop">
-        <span class="emoji">✨</span><span>Pop</span>
-      </div>
-      <div class="tag-chip" data-tag="hiphop" data-label="Hip-Hop">
-        <span class="emoji">🎤</span><span>Hip-Hop</span>
-      </div>
-    </div>
-
-    <!-- File selection row -->
-    <div class="form-row">
-      <!-- Thumbnail -->
-      <div class="field">
-        <div class="field-label">
-          <span>Square Cover Artwork</span>
-          <span class="field-hint">JPG or PNG (1:1 looks best)</span>
-        </div>
-        <div class="drop" id="dropThumb">
-          <input type="file" id="thumbFile" accept="image/jpeg,image/png" aria-label="Choose thumbnail">
-          <div class="thumb" id="thumbPreview">No Cover</div>
-          <div class="drop-info">
-            <div class="drop-title" id="thumbName">Choose or drop cover image</div>
-            <div class="drop-sub">High-res artwork for player</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Audio -->
-      <div class="field">
-        <div class="field-label">
-          <span>Audio File (MP3)</span>
-          <span class="field-hint">Max 30 MB</span>
-        </div>
-        <div class="drop" id="dropAudio">
-          <input type="file" id="audioFile" accept="audio/mpeg,.mp3" aria-label="Choose MP3">
-          <div class="note-icon" aria-hidden="true">&#9835;</div>
-          <div class="drop-info">
-            <div class="drop-title" id="audioName">Choose or drop MP3</div>
-            <div class="drop-sub" id="audioSize">Auto-detects title & tags</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Audio Player Preview -->
-    <div class="audio-preview" id="audioPreviewWrap" hidden>
-      <audio id="player" controls></audio>
-    </div>
-
-    <!-- Live Moonlight App Card Preview -->
-    <div class="preview-wrapper">
-      <span class="preview-badge">Moonlight App Preview</span>
-      <div class="app-card-demo">
-        <div class="app-art" id="previewArt">&#9835;</div>
-        <div class="app-meta">
-          <div class="app-song-title" id="previewTitle">Song Title</div>
-          <div class="app-song-artist" id="previewArtist">Artist / Creator</div>
-          <div class="app-song-shelves" id="previewShelves">
-            <span class="app-shelf-pill">🌙 Chill</span>
-            <span class="app-shelf-pill">❤️ Romance</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Auto-naming notice -->
-    <div class="naming-box" id="naming">
-      Drive File: <b id="namingAudio">Song - Artist.mp3</b><br>
-      Cover File: <b id="namingCover">moonlight-cover-(auto-id).jpg</b>
-    </div>
-
-    <!-- Upload Button -->
-    <button class="go" id="go" disabled>
-      <span id="btnText">Upload to Moonlight App</span>
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs">
+    <button class="tab-btn active" id="tabUploadBtn">
+      <span>🎵</span>
+      <span>Upload Song</span>
     </button>
+    <button class="tab-btn" id="tabManageBtn">
+      <span>📁</span>
+      <span>All Songs Manager</span>
+      <span class="badge-pill" id="allSongsCount">40</span>
+    </button>
+    <button class="tab-btn" id="tabNotifBtn">
+      <span>🔔</span>
+      <span>Notification Studio</span>
+    </button>
+  </nav>
 
-    <div class="status" id="status" role="status" aria-live="polite"></div>
+  <!-- ====================================================
+       TAB 1: Song Uploader
+       ==================================================== -->
+  <div class="tab-panel active" id="panelUpload">
+    <div class="card">
+      <div class="card-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span>Upload New Song to Google Drive</span>
+      </div>
+
+      <div class="form-row">
+        <label class="field">
+          <span class="field-label">
+            <span>Song / Mashup Title</span>
+            <span class="field-hint">e.g. Ek Mulaqat X Barbaad</span>
+          </span>
+          <input type="text" id="title" placeholder="Song Title" autocomplete="off">
+        </label>
+
+        <label class="field">
+          <span class="field-label">
+            <span>Artist / DJ / Creator</span>
+            <span class="field-hint">e.g. Love Mashup</span>
+          </span>
+          <input type="text" id="artist" placeholder="Artist or Creator" autocomplete="off">
+        </label>
+      </div>
+
+      <!-- Mood & Category Selector -->
+      <div class="tags-title">
+        <span>Moonlight App Mood & Category</span>
+        <span class="field-hint">Auto-sorts into Home sections</span>
+      </div>
+
+      <div class="tags-grid" id="tagsGrid">
+        <div class="tag-chip active" data-tag="chill"><span class="emoji">🌙</span><span>Chill / Lo-Fi</span></div>
+        <div class="tag-chip active" data-tag="love"><span class="emoji">❤️</span><span>Romance / Love</span></div>
+        <div class="tag-chip" data-tag="party"><span class="emoji">🔥</span><span>Midnight Party</span></div>
+        <div class="tag-chip" data-tag="sad"><span class="emoji">🌧️</span><span>Sad / Rainy</span></div>
+        <div class="tag-chip active" data-tag="mashup"><span class="emoji">🎧</span><span>Mashup / Remix</span></div>
+        <div class="tag-chip" data-tag="bollywood"><span class="emoji">🎬</span><span>Bollywood</span></div>
+        <div class="tag-chip" data-tag="punjabi"><span class="emoji">🪕</span><span>Punjabi</span></div>
+        <div class="tag-chip" data-tag="focus"><span class="emoji">🧘</span><span>Deep Focus</span></div>
+        <div class="tag-chip" data-tag="workout"><span class="emoji">⚡</span><span>Workout / Beat</span></div>
+        <div class="tag-chip" data-tag="pop"><span class="emoji">✨</span><span>Pop</span></div>
+      </div>
+
+      <!-- File selection row -->
+      <div class="form-row">
+        <div class="field">
+          <div class="field-label">
+            <span>Square Cover Artwork</span>
+            <span class="field-hint">JPG or PNG</span>
+          </div>
+          <div class="drop" id="dropThumb">
+            <input type="file" id="thumbFile" accept="image/jpeg,image/png">
+            <div class="thumb" id="thumbPreview">No Cover</div>
+            <div class="drop-info">
+              <div class="drop-title" id="thumbName">Choose or drop cover</div>
+              <div class="drop-sub">High-res artwork</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">
+            <span>Audio File (MP3)</span>
+            <span class="field-hint">Max 30 MB</span>
+          </div>
+          <div class="drop" id="dropAudio">
+            <input type="file" id="audioFile" accept="audio/mpeg,.mp3">
+            <div class="note-icon">&#9835;</div>
+            <div class="drop-info">
+              <div class="drop-title" id="audioName">Choose or drop MP3</div>
+              <div class="drop-sub" id="audioSize">Auto-detects title & tags</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audio Player Preview -->
+      <div class="audio-preview" id="audioPreviewWrap" hidden>
+        <audio id="player" controls></audio>
+      </div>
+
+      <!-- Live App Preview -->
+      <div class="preview-wrapper">
+        <span class="preview-badge">Moonlight App Preview</span>
+        <div class="app-card-demo">
+          <div class="app-art" id="previewArt">&#9835;</div>
+          <div class="app-meta">
+            <div class="app-song-title" id="previewTitle">Song Title</div>
+            <div class="app-song-artist" id="previewArtist">Artist / Creator</div>
+            <div class="app-song-shelves" id="previewShelves">
+              <span class="app-shelf-pill">🌙 Chill</span>
+              <span class="app-shelf-pill">❤️ Romance</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Button -->
+      <button class="go" id="go" disabled>
+        <span id="btnText">Upload to Moonlight App & Drive</span>
+      </button>
+
+      <div class="status" id="status" role="status"></div>
+    </div>
   </div>
 
-  <!-- Results Section -->
-  <section class="results" id="results" hidden>
-    <div class="results-header">
-      <h2>Uploaded to Google Drive</h2>
+  <!-- ====================================================
+       TAB 2: ALL SONGS MANAGER (Edit Title, Cover, Categories, Delete)
+       ==================================================== -->
+  <div class="tab-panel" id="panelManage">
+    <div class="card">
+      <div class="card-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span>Google Drive Songs Library</span>
+      </div>
+
+      <!-- Search & Refresh Bar -->
+      <div class="manager-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="songSearchInput" placeholder="Search by song name or artist...">
+        </div>
+        <div class="stats-badge">
+          <span id="songsCountBadge">Loading...</span>
+        </div>
+        <button class="refresh-btn" id="btnRefreshLibrary" title="Fetch latest from Google Drive">
+          🔄 Refresh
+        </button>
+      </div>
+
+      <!-- Songs List Container -->
+      <div class="song-manage-list" id="manageList">
+        <div style="text-align:center; padding:30px; color:var(--muted);">
+          Loading songs from Google Drive...
+        </div>
+      </div>
+
+      <div class="status" id="manageStatus" role="status"></div>
     </div>
-    <div id="list"></div>
-  </section>
+  </div>
+
+  <!-- ====================================================
+       TAB 3: Notification Studio
+       ==================================================== -->
+  <div class="tab-panel" id="panelNotif">
+    <div class="card">
+      <div class="card-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span>Broadcast Push Notification</span>
+      </div>
+
+      <label class="field">
+        <span class="field-label">
+          <span>Notification Title (Personalized)</span>
+          <span class="field-hint">{name} becomes user's profile name</span>
+        </span>
+        <input type="text" id="notifTitle" value="Hey {name}! 🌙" placeholder="e.g. Hey {name}! 🌙">
+        <div class="template-pills">
+          <span class="tmpl-pill" onclick="insertTitleTag('{name}')">+ {name} (User Name)</span>
+          <span class="tmpl-pill" onclick="insertTitleTag('🎧 New Drop')">+ 🎧 New Drop</span>
+          <span class="tmpl-pill" onclick="insertTitleTag('🔥 Trending Now')">+ 🔥 Trending</span>
+          <span class="tmpl-pill" onclick="insertTitleTag('🌙 Midnight Vibe')">+ 🌙 Midnight Vibe</span>
+          <span class="tmpl-pill" onclick="insertTitleTag('❤️ Romantic Hits')">+ ❤️ Romantic</span>
+        </div>
+      </label>
+
+      <label class="field">
+        <span class="field-label">
+          <span>Notification Tagline / Message</span>
+          <span class="field-hint">Appearing in push banner</span>
+        </span>
+        <textarea id="notifTagline" placeholder="e.g. Aaj raat ka sabse trending chill mashup abhi suniye! 🎧"></textarea>
+      </label>
+
+      <!-- Image Option -->
+      <div class="field">
+        <span class="field-label">
+          <span>Notification Banner Image (Optional)</span>
+          <span class="field-hint">Rich visual preview</span>
+        </span>
+        <div class="drop" id="dropNotifImg" style="margin-bottom: 10px;">
+          <input type="file" id="notifImgFile" accept="image/jpeg,image/png">
+          <div class="thumb" id="notifImgThumb">No Image</div>
+          <div class="drop-info">
+            <div class="drop-title" id="notifImgName">Choose banner image</div>
+            <div class="drop-sub">JPG or PNG image</div>
+          </div>
+        </div>
+        <input type="text" id="notifImgUrl" placeholder="Or paste image URL (https://...)" autocomplete="off">
+      </div>
+
+      <!-- Target Song Action -->
+      <label class="field">
+        <span class="field-label">
+          <span>Link with a Song (Optional)</span>
+          <span class="field-hint">Tapping notification plays this song</span>
+        </span>
+        <select id="notifSongSelect">
+          <option value="">-- No specific song (opens App Home) --</option>
+        </select>
+      </label>
+
+      <!-- Smartphone Notification Mockup -->
+      <div class="phone-mockup">
+        <div class="phone-header">
+          <span>12:00</span>
+          <span>●●● 5G 100%</span>
+        </div>
+
+        <div class="notif-card-demo">
+          <div class="notif-demo-top">
+            <div class="notif-demo-logo">&#9790;</div>
+            <span class="notif-demo-appname">MOONLIGHT</span>
+            <span>• now</span>
+          </div>
+          <div class="notif-demo-body">
+            <div class="notif-demo-text">
+              <div class="notif-demo-title" id="demoTitle">Hey Anish! 🌙</div>
+              <div class="notif-demo-tagline" id="demoTagline">Aaj raat ka sabse trending mashup abhi suniye! 🎧</div>
+            </div>
+            <div class="notif-demo-image" id="demoImg" hidden></div>
+          </div>
+        </div>
+
+        <div class="name-switcher">
+          <span>Test preview with name:</span>
+          <span class="name-pill active" onclick="switchTestName('Anish', this)">Anish</span>
+          <span class="name-pill" onclick="switchTestName('Priya', this)">Priya</span>
+          <span class="name-pill" onclick="switchTestName('Rahul', this)">Rahul</span>
+          <span class="name-pill" onclick="switchTestName('Music Lover', this)">Guest</span>
+        </div>
+      </div>
+
+      <button class="go" id="btnSendNotif">
+        <span id="notifBtnText">🚀 Broadcast Notification to App</span>
+      </button>
+
+      <button class="secondary-btn" id="btnClearNotif">
+        <span>🗑️ Clear / Deactivate Active Notification</span>
+      </button>
+
+      <div class="status" id="notifStatus" role="status"></div>
+    </div>
+
+    <!-- Backend Google Apps Script Guide Accordion -->
+    <div class="code-accordion">
+      <div class="accordion-head" id="accordionToggle">
+        <span>⚙️ Google Apps Script Backend Setup (Includes Delete, Edit & Notifications)</span>
+        <span id="accordionArrow">▼</span>
+      </div>
+      <div class="accordion-body" id="accordionBody">
+        <p style="font-size:0.86rem; color:var(--muted); margin-bottom:12px;">
+          Apne Google Drive mein Apps Script editor kholiye aur purane code ki jagah ye complete code paste karke <b>Deploy &gt; New deployment</b> kar dein. Isse <b>Song Upload</b>, <b>Song Edit/Rename</b>, <b>MP3 + Cover Delete</b>, aur <b>Push Notifications</b> sab chalenge!
+        </p>
+        <button class="copy-script-btn" onclick="copyAppsScriptCode()">📋 Copy Complete Apps Script Code</button>
+        <pre><code id="scriptCode">const FOLDER_ID = "1hu1kGOqDz2zM8H7aNd4SzMQl9ru3FB7n";
+const SECRET_KEY = "anishkumwat";
+
+function doGet(e) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    let notif = null;
+    const raw = props.getProperty("notification");
+    if (raw) {
+      notif = JSON.parse(raw);
+    } else {
+      const folder = DriveApp.getFolderById(FOLDER_ID);
+      const files = folder.getFilesByName("moonlight-notification.json");
+      if (files.hasNext()) {
+        notif = JSON.parse(files.next().getBlob().getDataAsString());
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({ ok: true, notification: notif }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    if (!data.key || data.key !== SECRET_KEY) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: "Wrong secret key" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const folder = DriveApp.getFolderById(FOLDER_ID);
+    const props = PropertiesService.getScriptProperties();
+
+    // 1. DELETE SONG & MATCHING THUMBNAIL
+    if (data.action === "delete_song") {
+      const fileId = data.songId;
+      let audioStem = "";
+      try {
+        const audioFile = DriveApp.getFileById(fileId);
+        audioStem = audioFile.getName().replace(/\.[^.]+$/, "").trim();
+        audioFile.setTrashed(true);
+      } catch (err) {}
+
+      // Trash matching cover file(s)
+      const allFiles = folder.getFiles();
+      while (allFiles.hasNext()) {
+        const f = allFiles.next();
+        const fname = f.getName();
+        const isCover = fname.startsWith("moonlight-cover-") || /\.(jpe?g|png)$/i.test(fname);
+        if (fname.includes(fileId) || (audioStem && isCover && fname.toLowerCase().startsWith(audioStem.toLowerCase()))) {
+          f.setTrashed(true);
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, deleted: fileId }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 2. UPDATE SONG (Title, Artist, Categories, or Cover)
+    if (data.action === "update_song") {
+      const fileId = data.songId;
+      const audioFile = DriveApp.getFileById(fileId);
+      if (data.newTitle) {
+        audioFile.setName(data.newTitle + ".mp3");
+      }
+
+      // If new thumbnail is uploaded
+      let newCoverId = null;
+      if (data.newThumb) {
+        // Trash old cover
+        const allFiles = folder.getFiles();
+        while (allFiles.hasNext()) {
+          const f = allFiles.next();
+          if (f.getName().startsWith("moonlight-cover-" + fileId)) {
+            f.setTrashed(true);
+          }
+        }
+        const ext = data.thumbExt || "jpg";
+        const thumbBlob = Utilities.newBlob(
+          Utilities.base64Decode(data.newThumb),
+          data.thumbType || "image/jpeg",
+          "moonlight-cover-" + fileId + "." + ext
+        );
+        const newThumbFile = folder.createFile(thumbBlob);
+        newThumbFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        newCoverId = newThumbFile.getId();
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: true,
+        updated: fileId,
+        title: data.newTitle,
+        coverId: newCoverId
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 3. SET PUSH NOTIFICATION
+    if (data.action === "set_notification") {
+      const notifData = {
+        id: data.id || ("n_" + Date.now()),
+        title: data.title || "Hey {name}! 🌙",
+        tagline: data.tagline || "",
+        imageUrl: data.imageUrl || "",
+        songId: data.songId || "",
+        active: data.active !== false,
+        createdAt: Date.now()
+      };
+      props.setProperty("notification", JSON.stringify(notifData));
+
+      const files = folder.getFilesByName("moonlight-notification.json");
+      if (files.hasNext()) {
+        files.next().setContent(JSON.stringify(notifData));
+      } else {
+        folder.createFile("moonlight-notification.json", JSON.stringify(notifData), MimeType.PLAIN_TEXT);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, notification: notifData }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 4. CLEAR PUSH NOTIFICATION
+    if (data.action === "clear_notification") {
+      props.deleteProperty("notification");
+      const files = folder.getFilesByName("moonlight-notification.json");
+      while (files.hasNext()) files.next().setTrashed(true);
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, cleared: true }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 5. UPLOAD NEW SONG (MP3 + Cover)
+    if (data.audio) {
+      const audioBlob = Utilities.newBlob(Utilities.base64Decode(data.audio), "audio/mpeg", (data.title || "Untitled") + ".mp3");
+      const audioFile = folder.createFile(audioBlob);
+      audioFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+      let thumbFile = null;
+      if (data.thumb) {
+        const ext = data.thumbExt || "jpg";
+        const thumbBlob = Utilities.newBlob(
+          Utilities.base64Decode(data.thumb),
+          data.thumbType || "image/jpeg",
+          "moonlight-cover-" + audioFile.getId() + "." + ext
+        );
+        thumbFile = folder.createFile(thumbBlob);
+        thumbFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      }
+
+      const res = {
+        ok: true,
+        id: audioFile.getId(),
+        title: data.title,
+        audioName: audioFile.getName(),
+        thumbName: thumbFile ? thumbFile.getName() : "",
+        mp3Link: "https://drive.google.com/uc?export=download&id=" + audioFile.getId(),
+        thumbLink: thumbFile ? "https://drive.google.com/uc?export=view&id=" + thumbFile.getId() : "",
+        thumbPreviewLink: thumbFile ? "https://drive.google.com/thumbnail?id=" + thumbFile.getId() + "&sz=w400" : ""
+      };
+
+      return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: "Invalid action or missing data" }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}</code></pre>
+      </div>
+    </div>
+  </div>
 </main>
 
+<!-- ====================================================
+     EDIT SONG MODAL
+     ==================================================== -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title">✏️ Edit Song Details</div>
+      <button class="modal-close" id="btnModalClose">&times;</button>
+    </div>
+
+    <input type="hidden" id="editSongId">
+
+    <label class="field">
+      <span class="field-label">Song Title</span>
+      <input type="text" id="editTitleInput" placeholder="Clean song name">
+    </label>
+
+    <label class="field">
+      <span class="field-label">Artist / DJ</span>
+      <input type="text" id="editArtistInput" placeholder="Artist name">
+    </label>
+
+    <!-- Categories selector -->
+    <div class="tags-title">
+      <span>Categories & Mood Tags</span>
+      <span class="field-hint">Click to toggle</span>
+    </div>
+    <div class="tags-grid" id="editTagsGrid">
+      <div class="tag-chip" data-tag="chill"><span class="emoji">🌙</span><span>Chill / Lo-Fi</span></div>
+      <div class="tag-chip" data-tag="love"><span class="emoji">❤️</span><span>Romance / Love</span></div>
+      <div class="tag-chip" data-tag="party"><span class="emoji">🔥</span><span>Midnight Party</span></div>
+      <div class="tag-chip" data-tag="sad"><span class="emoji">🌧️</span><span>Sad / Rainy</span></div>
+      <div class="tag-chip" data-tag="mashup"><span class="emoji">🎧</span><span>Mashup / Remix</span></div>
+      <div class="tag-chip" data-tag="bollywood"><span class="emoji">🎬</span><span>Bollywood</span></div>
+      <div class="tag-chip" data-tag="punjabi"><span class="emoji">🪕</span><span>Punjabi</span></div>
+      <div class="tag-chip" data-tag="focus"><span class="emoji">🧘</span><span>Deep Focus</span></div>
+      <div class="tag-chip" data-tag="workout"><span class="emoji">⚡</span><span>Workout</span></div>
+      <div class="tag-chip" data-tag="pop"><span class="emoji">✨</span><span>Pop</span></div>
+    </div>
+
+    <!-- Update Cover (Optional) -->
+    <div class="field">
+      <span class="field-label">
+        <span>Change Cover Image (Optional)</span>
+        <span class="field-hint">Upload new JPG/PNG</span>
+      </span>
+      <div class="drop" id="editDropCover">
+        <input type="file" id="editCoverFile" accept="image/jpeg,image/png">
+        <div class="thumb" id="editCoverThumb">Keep Current</div>
+        <div class="drop-info">
+          <div class="drop-title" id="editCoverName">Choose new cover photo</div>
+          <div class="drop-sub">Leave empty to keep existing cover</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:0.82rem; color:var(--muted); margin: 12px 0;">
+      Google Drive Filename: <b id="editPreviewFilename" style="color:var(--violet-soft); word-break:break-all;"></b>
+    </div>
+
+    <button class="go" id="btnSaveSongEdit">
+      <span id="saveBtnText">💾 Save Changes to Google Drive</span>
+    </button>
+  </div>
+</div>
+
 <script>
-/* ====== SETTINGS: Google Apps Script Backend ====== */
+/* ====== CONFIGURATION ====== */
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzcXCIU6nAe3v8IbPi3DxVwZIfKSEr7RwMD8f9NMWk11s58G6pDY3xh1Ig7of5vXBi6/exec";
 const SECRET_KEY = "anishkumwat";
-const MAX_AUDIO_MB = 30;
-/* ================================================== */
+const DRIVE_FOLDER_ID = "1hu1kGOqDz2zM8H7aNd4SzMQl9ru3FB7n";
+const DRIVE_API_KEY = "AIzaSyCRrMCDmjfP6XL8V_rGL5YNDQtts_00qKw";
+/* =========================== */
 
 const $ = id => document.getElementById(id);
+
+// --- TAB SWITCHING ---
+$("tabUploadBtn").addEventListener("click", () => switchTab("upload"));
+$("tabManageBtn").addEventListener("click", () => {
+  switchTab("manage");
+  fetchDriveLibrary();
+});
+$("tabNotifBtn").addEventListener("click", () => {
+  switchTab("notif");
+  updateNotifPreview();
+  loadDriveSongsForSelect();
+});
+
+function switchTab(name) {
+  $("tabUploadBtn").classList.toggle("active", name === "upload");
+  $("tabManageBtn").classList.toggle("active", name === "manage");
+  $("tabNotifBtn").classList.toggle("active", name === "notif");
+
+  $("panelUpload").classList.toggle("active", name === "upload");
+  $("panelManage").classList.toggle("active", name === "manage");
+  $("panelNotif").classList.toggle("active", name === "notif");
+}
+
+// --- ACCORDION ---
+$("accordionToggle").addEventListener("click", () => {
+  const body = $("accordionBody");
+  const isOpen = body.classList.toggle("open");
+  $("accordionArrow").textContent = isOpen ? "▲" : "▼";
+});
+
+function copyAppsScriptCode() {
+  const code = $("scriptCode").textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    alert("Complete Apps Script code copied! Paste in Google Apps Script editor.");
+  });
+}
+
+// ==========================================
+// 1. ALL SONGS MANAGER LOGIC
+// ==========================================
+let librarySongs = [];
+let editSelectedTags = new Set();
+let editNewThumbB64 = null;
+let editNewThumbFile = null;
+
+async function fetchDriveLibrary() {
+  $("songsCountBadge").textContent = "Loading...";
+  showStatus($("manageStatus"), "Fetching songs from Google Drive...", "info");
+
+  try {
+    const query = encodeURIComponent(`'${DRIVE_FOLDER_ID}' in parents and trashed = false`);
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,mimeType,thumbnailLink,size,createdTime)&orderBy=createdTime+desc&pageSize=100&key=${DRIVE_API_KEY}`);
+    const data = await res.json();
+    const allFiles = data.files || [];
+
+    const audioFiles = allFiles.filter(f => f.mimeType.startsWith('audio/') || /\.(mp3|m4a|aac)$/i.test(f.name));
+    const imageFiles = allFiles.filter(f => f.mimeType.startsWith('image/') || /\.(jpe?g|png)$/i.test(f.name));
+
+    // Map cover images
+    const coverMap = new Map();
+    imageFiles.forEach(img => {
+      // Check moonlight-cover-<audioId>
+      if (img.name.startsWith("moonlight-cover-")) {
+        const idPart = img.name.replace(/^moonlight-cover-/, '').replace(/\.[^.]+$/, '');
+        coverMap.set(idPart, img);
+      }
+    });
+
+    librarySongs = audioFiles.map(audio => {
+      const stem = audio.name.replace(/\.[^.]+$/, '').trim();
+      let title = stem;
+      let artist = "Moonlight Mashup";
+
+      const sepIndex = stem.indexOf(" - ");
+      if (sepIndex > 0) {
+        title = stem.slice(0, sepIndex).trim();
+        artist = stem.slice(sepIndex + 3).trim();
+      }
+
+      // Check matched cover
+      const cover = coverMap.get(audio.id);
+      const coverUrl = cover ? `https://lh3.googleusercontent.com/d/${cover.id}=s400` : (audio.thumbnailLink || "");
+
+      // Extract existing tags
+      const lower = stem.toLowerCase();
+      const detectedTags = ["chill", "love", "party", "sad", "mashup", "bollywood", "punjabi", "focus", "workout", "pop"].filter(t => lower.includes(t));
+
+      return {
+        id: audio.id,
+        rawName: stem,
+        title: title,
+        artist: artist,
+        tags: detectedTags,
+        coverUrl: coverUrl,
+        sizeMb: audio.size ? (audio.size / 1048576).toFixed(1) : "—"
+      };
+    });
+
+    $("allSongsCount").textContent = librarySongs.length;
+    $("songsCountBadge").textContent = `${librarySongs.length} Songs`;
+    renderManageList(librarySongs);
+    showStatus($("manageStatus"), "", "");
+  } catch (err) {
+    showStatus($("manageStatus"), "Error loading songs from Drive: " + err.message, "err");
+  }
+}
+
+function renderManageList(songsToRender) {
+  const container = $("manageList");
+  container.innerHTML = "";
+
+  if (songsToRender.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--muted);">No songs found matching your search.</div>`;
+    return;
+  }
+
+  songsToRender.forEach(song => {
+    const card = document.createElement("div");
+    card.className = "manage-card";
+    card.id = `songCard_${song.id}`;
+
+    const coverStyle = song.coverUrl ? `background-image: url('${song.coverUrl}')` : "background:#251b42";
+
+    const tagsHtml = song.tags.map(t => `<span class="manage-tag-badge">${t}</span>`).join("");
+
+    card.innerHTML = `
+      <div class="manage-cover" style="${coverStyle}"></div>
+      <div class="manage-info">
+        <div class="manage-title" title="${escapeHtml(song.title)}">${escapeHtml(song.title)}</div>
+        <div class="manage-artist">${escapeHtml(song.artist)} • ${song.sizeMb} MB</div>
+        <div class="manage-tags">${tagsHtml || '<span class="manage-tag-badge" style="opacity:0.6">No tags</span>'}</div>
+      </div>
+      <div class="manage-actions">
+        <button class="action-btn" onclick="openEditModal('${song.id}')">✏️ Edit</button>
+        <button class="action-btn delete" onclick="confirmDeleteSong('${song.id}', '${escapeQuotes(song.title)}')">🗑️ Delete</button>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+// Search filter
+$("songSearchInput").addEventListener("input", (e) => {
+  const q = e.target.value.toLowerCase().trim();
+  if (!q) {
+    renderManageList(librarySongs);
+    return;
+  }
+  const filtered = librarySongs.filter(s =>
+    s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q) || s.tags.some(t => t.includes(q))
+  );
+  renderManageList(filtered);
+});
+
+$("btnRefreshLibrary").addEventListener("click", fetchDriveLibrary);
+
+// --- EDIT MODAL LOGIC ---
+function openEditModal(songId) {
+  const song = librarySongs.find(s => s.id === songId);
+  if (!song) return;
+
+  $("editSongId").value = song.id;
+  $("editTitleInput").value = song.title;
+  $("editArtistInput").value = song.artist;
+
+  // Cover preview
+  editNewThumbB64 = null;
+  editNewThumbFile = null;
+  $("editCoverName").textContent = "Choose new cover photo";
+  $("editCoverThumb").style.backgroundImage = song.coverUrl ? `url('${song.coverUrl}')` : "";
+  $("editCoverThumb").textContent = song.coverUrl ? "" : "No Cover";
+  $("editDropCover").classList.remove("filled");
+
+  // Populate tags
+  editSelectedTags = new Set(song.tags);
+  renderEditTags();
+  updateEditFilenamePreview();
+
+  $("editModal").classList.add("open");
+}
+
+function closeEditModal() {
+  $("editModal").classList.remove("open");
+}
+
+$("btnModalClose").addEventListener("click", closeEditModal);
+
+function renderEditTags() {
+  document.querySelectorAll("#editTagsGrid .tag-chip").forEach(chip => {
+    const tag = chip.getAttribute("data-tag");
+    chip.classList.toggle("active", editSelectedTags.has(tag));
+  });
+}
+
+document.querySelectorAll("#editTagsGrid .tag-chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    const tag = chip.getAttribute("data-tag");
+    if (editSelectedTags.has(tag)) editSelectedTags.delete(tag);
+    else editSelectedTags.add(tag);
+    renderEditTags();
+    updateEditFilenamePreview();
+  });
+});
+
+function getEditFormattedTitle() {
+  const rawTitle = $("editTitleInput").value.trim() || "Untitled Song";
+  const rawArtist = $("editArtistInput").value.trim() || "Moonlight";
+  const tagsList = Array.from(editSelectedTags);
+  const tagSuffix = tagsList.length ? " " + tagsList.join(" ") : "";
+  return `${rawTitle} - ${rawArtist}${tagSuffix}`;
+}
+
+function updateEditFilenamePreview() {
+  $("editPreviewFilename").textContent = getEditFormattedTitle() + ".mp3";
+}
+
+$("editTitleInput").addEventListener("input", updateEditFilenamePreview);
+$("editArtistInput").addEventListener("input", updateEditFilenamePreview);
+
+$("editCoverFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  editNewThumbFile = file;
+  $("editCoverName").textContent = file.name;
+  const url = URL.createObjectURL(file);
+  $("editCoverThumb").style.backgroundImage = `url('${url}')`;
+  $("editCoverThumb").textContent = "";
+  $("editDropCover").classList.add("filled");
+
+  try {
+    editNewThumbB64 = await toBase64(file);
+  } catch {}
+});
+
+// Save Song Edit
+$("btnSaveSongEdit").addEventListener("click", async () => {
+  const songId = $("editSongId").value;
+  const newFormattedTitle = getEditFormattedTitle();
+
+  $("btnSaveSongEdit").disabled = true;
+  $("saveBtnText").textContent = "Saving to Google Drive...";
+
+  try {
+    const payload = {
+      key: SECRET_KEY,
+      action: "update_song",
+      songId: songId,
+      newTitle: newFormattedTitle
+    };
+
+    if (editNewThumbB64 && editNewThumbFile) {
+      payload.newThumb = editNewThumbB64;
+      payload.thumbExt = extOf(editNewThumbFile);
+      payload.thumbType = editNewThumbFile.type;
+    }
+
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+
+    const out = await res.json();
+    if (!out.ok) throw new Error(out.error || "Save failed");
+
+    closeEditModal();
+    alert("✅ Song updated in Google Drive! Moonlight App will now reflect the new title & categories.");
+    fetchDriveLibrary();
+  } catch (err) {
+    alert("❌ Update failed: " + err.message + "\n\nMake sure you pasted the updated Apps Script code from the bottom guide!");
+  } finally {
+    $("btnSaveSongEdit").disabled = false;
+    $("saveBtnText").textContent = "💾 Save Changes to Google Drive";
+  }
+});
+
+// Delete Song
+async function confirmDeleteSong(songId, songTitle) {
+  const proceed = confirm(`⚠️ Are you sure you want to delete:\n"${songTitle}"?\n\nThis will PERMANENTLY delete both the MP3 audio file and its cover image from Google Drive.`);
+  if (!proceed) return;
+
+  const card = $(`songCard_${songId}`);
+  if (card) card.style.opacity = "0.4";
+
+  showStatus($("manageStatus"), `Deleting "${songTitle}" and its cover from Google Drive...`, "info");
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        key: SECRET_KEY,
+        action: "delete_song",
+        songId: songId
+      })
+    });
+
+    const out = await res.json();
+    if (!out.ok) throw new Error(out.error || "Delete failed");
+
+    if (card) card.remove();
+    librarySongs = librarySongs.filter(s => s.id !== songId);
+    $("allSongsCount").textContent = librarySongs.length;
+    $("songsCountBadge").textContent = `${librarySongs.length} Songs`;
+
+    showStatus($("manageStatus"), `🗑️ Successfully deleted "${songTitle}" from Google Drive!`, "ok");
+  } catch (err) {
+    if (card) card.style.opacity = "1";
+    showStatus($("manageStatus"), "Delete failed: " + err.message + " (Check Apps Script code)", "err");
+  }
+}
+
+// Helpers
+function escapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function escapeQuotes(str) {
+  return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ==========================================
+// 2. SONG UPLOADER LOGIC
+// ==========================================
 let thumb = null, audio = null;
 const selectedTags = new Set(["chill", "love", "mashup"]);
 
-// Interactive tags toggle
-document.querySelectorAll(".tag-chip").forEach(chip => {
+document.querySelectorAll("#tagsGrid .tag-chip").forEach(chip => {
   chip.addEventListener("click", () => {
     const tag = chip.getAttribute("data-tag");
     if (selectedTags.has(tag)) {
@@ -828,17 +1411,12 @@ document.querySelectorAll(".tag-chip").forEach(chip => {
       selectedTags.add(tag);
       chip.classList.add("active");
     }
-    refresh();
+    refreshUpload();
   });
 });
 
-function newSongId(){
-  return "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-}
-
-function extOf(file){
-  return file.type === "image/png" ? "png" : "jpg";
-}
+function newSongId(){ return "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+function extOf(file){ return file.type === "image/png" ? "png" : "jpg"; }
 
 function toBase64(file){
   return new Promise((resolve, reject) => {
@@ -854,29 +1432,21 @@ function getFormattedDriveTitle() {
   const rawArtist = $("artist").value.trim() || "Moonlight";
   const tagsList = Array.from(selectedTags);
   const tagSuffix = tagsList.length ? " " + tagsList.join(" ") : "";
-  
-  // Format: Title - Artist tag1 tag2
-  // parseSongName in Moonlight splits at ' - ':
-  // song.title = Title
-  // song.artist = Artist tag1 tag2 (matches Moonlight mood filters and search categories!)
   return `${rawTitle} - ${rawArtist}${tagSuffix}`;
 }
 
-function refresh(){
+function refreshUpload(){
   const titleVal = $("title").value.trim();
   const artistVal = $("artist").value.trim() || "Moonlight Mashup";
-  const canUpload = !!(thumb && audio && titleVal);
-  $("go").disabled = !canUpload;
+  $("go").disabled = !(thumb && audio && titleVal);
 
-  // Update App Demo Preview
   $("previewTitle").textContent = titleVal || "Song Title";
   $("previewArtist").textContent = artistVal;
 
-  // Update Preview Shelves
   const shelvesContainer = $("previewShelves");
   shelvesContainer.innerHTML = "";
   selectedTags.forEach(tag => {
-    const chip = document.querySelector(`.tag-chip[data-tag="${tag}"]`);
+    const chip = document.querySelector(`#tagsGrid .tag-chip[data-tag="${tag}"]`);
     if (chip) {
       const pill = document.createElement("span");
       pill.className = "app-shelf-pill";
@@ -884,20 +1454,10 @@ function refresh(){
       shelvesContainer.appendChild(pill);
     }
   });
-
-  // Update Naming Box
-  const formatted = getFormattedDriveTitle();
-  const ext = thumb ? extOf(thumb) : "jpg";
-  $("namingAudio").textContent = formatted + ".mp3";
-  $("namingCover").textContent = "moonlight-cover-(drive-id)." + ext;
 }
 
 function setThumb(file){
   if(!file) return;
-  if(!/^image\/(jpeg|png)$/.test(file.type)){
-    say("Thumbnail must be a JPG or PNG image.", "err");
-    return;
-  }
   thumb = file;
   const url = URL.createObjectURL(file);
   $("thumbPreview").style.backgroundImage = "url(" + url + ")";
@@ -907,21 +1467,11 @@ function setThumb(file){
 
   $("previewArt").style.backgroundImage = "url(" + url + ")";
   $("previewArt").textContent = "";
-
-  say("");
-  refresh();
+  refreshUpload();
 }
 
 function setAudio(file){
   if(!file) return;
-  if(!/\.mp3$/i.test(file.name) && file.type !== "audio/mpeg"){
-    say("Audio must be an MP3 file.", "err");
-    return;
-  }
-  if(file.size > MAX_AUDIO_MB * 1024 * 1024){
-    say("That MP3 is over " + MAX_AUDIO_MB + " MB. Please use a smaller file.", "err");
-    return;
-  }
   audio = file;
   $("audioName").textContent = file.name;
   $("audioSize").textContent = (file.size / 1048576).toFixed(1) + " MB";
@@ -931,68 +1481,17 @@ function setAudio(file){
   $("audioPreviewWrap").hidden = false;
   $("dropAudio").classList.add("filled");
 
-  // Auto-detect Title, Artist & Tags from filename if title is empty
-  autoDetectFromFilename(file.name);
-
-  say("");
-  refresh();
-}
-
-function autoDetectFromFilename(fileName) {
-  // Remove extension
-  const stem = fileName.replace(/\.[^.]+$/, '').trim();
-
-  // If title is currently blank, parse stem
+  const stem = file.name.replace(/\.[^.]+$/, '').trim();
   if (!$("title").value.trim()) {
-    let title = stem;
-    let artist = "";
-
-    const sepIndex = stem.indexOf(" - ");
-    if (sepIndex > 0) {
-      title = stem.slice(0, sepIndex).trim();
-      artist = stem.slice(sepIndex + 3).trim();
+    const sep = stem.indexOf(" - ");
+    if (sep > 0) {
+      $("title").value = stem.slice(0, sep).trim();
+      $("artist").value = stem.slice(sep + 3).trim();
+    } else {
+      $("title").value = stem;
     }
-
-    // Clean up typical release junk from title
-    title = title.replace(/\(Full Version\)|\(Official Video\)|\(Audio\)|\[.*?\]/gi, '').trim();
-    
-    $("title").value = title;
-    if (artist && !$("artist").value.trim()) {
-      $("artist").value = artist;
-    }
-
-    // Auto-detect tags from filename
-    const lower = stem.toLowerCase();
-    const tagKeywords = {
-      love: ["love", "romance", "romantic", "dil", "mohabbat"],
-      chill: ["chill", "lofi", "lo-fi", "slow", "acoustic", "peace"],
-      party: ["party", "dance", "remix", "club", "dhamaka", "dj"],
-      sad: ["sad", "dard", "judaai", "broken", "tears"],
-      mashup: ["mashup", "mixtape", "mega mashup"],
-      punjabi: ["punjabi", "karan aujla", "sidhu", "ap dhillon", "diljit"],
-      bollywood: ["bollywood", "hindi", "arijit"],
-      workout: ["workout", "gym", "energy", "bass"]
-    };
-
-    Object.entries(tagKeywords).forEach(([tag, words]) => {
-      if (words.some(w => lower.includes(w))) {
-        selectedTags.add(tag);
-        const chip = document.querySelector(`.tag-chip[data-tag="${tag}"]`);
-        if (chip) chip.classList.add("active");
-      }
-    });
   }
-}
-
-function say(msg, kind){
-  const s = $("status");
-  if (!msg) {
-    s.textContent = "";
-    s.className = "status";
-    return;
-  }
-  s.textContent = msg;
-  s.className = "status show " + (kind || "info");
+  refreshUpload();
 }
 
 function wireDrop(zone, onFile){
@@ -1000,21 +1499,17 @@ function wireDrop(zone, onFile){
   ["dragleave","drop"].forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.remove("over"); }));
   zone.addEventListener("drop", ev => {
     ev.preventDefault();
-    if (ev.dataTransfer.files && ev.dataTransfer.files[0]) {
-      onFile(ev.dataTransfer.files[0]);
-    }
+    if (ev.dataTransfer.files && ev.dataTransfer.files[0]) onFile(ev.dataTransfer.files[0]);
   });
 }
 
 $("thumbFile").addEventListener("change", e => setThumb(e.target.files[0]));
 $("audioFile").addEventListener("change", e => setAudio(e.target.files[0]));
-$("title").addEventListener("input", refresh);
-$("artist").addEventListener("input", refresh);
-
+$("title").addEventListener("input", refreshUpload);
+$("artist").addEventListener("input", refreshUpload);
 wireDrop($("dropThumb"), setThumb);
 wireDrop($("dropAudio"), setAudio);
 
-// Upload Action
 $("go").addEventListener("click", async () => {
   if(!thumb || !audio || !$("title").value.trim()) return;
 
@@ -1022,14 +1517,11 @@ $("go").addEventListener("click", async () => {
   const id = newSongId();
 
   $("go").disabled = true;
-  $("btnText").innerHTML = '<div class="spinner"></div> Uploading to Google Drive…';
-  say("Encoding files and transferring to Google Drive... Keep this tab open.", "info");
+  $("btnText").textContent = "Uploading to Google Drive…";
+  showStatus($("status"), "Encoding files & uploading to Google Drive...", "info");
 
   try{
     const [audioB64, thumbB64] = await Promise.all([toBase64(audio), toBase64(thumb)]);
-    
-    say("Saving song and cover to Moonlight Drive folder...", "info");
-
     const res = await fetch(SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -1047,112 +1539,175 @@ $("go").addEventListener("click", async () => {
     const out = await res.json();
     if(!out.ok) throw new Error(out.error || "Upload failed");
 
-    addResult(out, $("title").value.trim(), $("artist").value.trim() || "Moonlight Mashup");
-    say("Song uploaded successfully! It is now live in your Moonlight App.", "ok");
-    reset();
+    showStatus($("status"), "🎉 Song uploaded successfully! Added to your Moonlight App.", "ok");
+    // Switch to manage tab so user sees it
+    setTimeout(() => {
+      switchTab("manage");
+      fetchDriveLibrary();
+    }, 1200);
   }catch(err){
-    say("Upload failed: " + err.message + ". Please check internet and try again.", "err");
+    showStatus($("status"), "Upload failed: " + err.message, "err");
   }finally{
     $("go").disabled = false;
-    $("btnText").textContent = "Upload to Moonlight App";
+    $("btnText").textContent = "Upload to Moonlight App & Drive";
   }
 });
 
-function reset(){
-  thumb = audio = null;
-  $("title").value = "";
-  $("artist").value = "";
-  
-  $("thumbPreview").style.backgroundImage = "";
-  $("thumbPreview").textContent = "No Cover";
-  $("thumbName").textContent = "Choose or drop cover image";
-  
-  $("audioName").textContent = "Choose or drop MP3";
-  $("audioSize").textContent = "Auto-detects title & tags";
-  
-  $("player").pause();
-  $("player").removeAttribute("src");
-  $("audioPreviewWrap").hidden = true;
-  
-  $("previewArt").style.backgroundImage = "";
-  $("previewArt").textContent = "\u266B";
-  
-  $("dropThumb").classList.remove("filled");
-  $("dropAudio").classList.remove("filled");
-  
-  $("thumbFile").value = "";
-  $("audioFile").value = "";
-  
-  refresh();
+// ==========================================
+// 3. NOTIFICATION STUDIO LOGIC
+// ==========================================
+let currentTestName = "Anish";
+let notifImgBase64 = "";
+
+function insertTitleTag(text) {
+  const input = $("notifTitle");
+  input.value += (input.value ? " " : "") + text;
+  updateNotifPreview();
 }
 
-function addResult(o, cleanTitle, cleanArtist){
-  $("results").hidden = false;
-  const el = document.createElement("div");
-  el.className = "song-card";
-  
-  const img = document.createElement("img");
-  img.src = o.thumbPreviewLink || o.thumbLink;
-  img.alt = cleanTitle;
+function switchTestName(name, el) {
+  currentTestName = name;
+  document.querySelectorAll(".name-pill").forEach(p => p.classList.remove("active"));
+  el.classList.add("active");
+  updateNotifPreview();
+}
 
-  const box = document.createElement("div");
-  
-  const t = document.createElement("div");
-  t.className = "t";
-  t.textContent = cleanTitle;
+function updateNotifPreview() {
+  const rawTitle = $("notifTitle").value.trim() || "Hey {name}! 🌙";
+  const rawTagline = $("notifTagline").value.trim() || "Suniye aaj raat ka trending mashup! 🎧";
 
-  const a = document.createElement("div");
-  a.className = "a";
-  a.textContent = cleanArtist;
+  const renderedTitle = rawTitle.replace(/\{name\}|\{user\}/gi, currentTestName);
+  const renderedTagline = rawTagline.replace(/\{name\}|\{user\}/gi, currentTestName);
 
-  const idTag = document.createElement("div");
-  idTag.className = "id-pill";
-  idTag.textContent = "Drive ID: " + o.id;
+  $("demoTitle").textContent = renderedTitle;
+  $("demoTagline").textContent = renderedTagline;
 
-  const copyRow = document.createElement("div");
-  copyRow.className = "copy-grid";
+  const imgUrl = notifImgBase64 || $("notifImgUrl").value.trim();
+  const demoImgEl = $("demoImg");
+  if (imgUrl) {
+    demoImgEl.style.backgroundImage = `url("${imgUrl}")`;
+    demoImgEl.hidden = false;
+  } else {
+    demoImgEl.hidden = true;
+  }
+}
 
-  const jsonSnippet = JSON.stringify({
-    id: o.id,
-    title: cleanTitle,
-    artist: cleanArtist,
-    audioUrl: o.mp3Link,
-    coverUrl: o.thumbLink
-  }, null, 2);
+$("notifTitle").addEventListener("input", updateNotifPreview);
+$("notifTagline").addEventListener("input", updateNotifPreview);
+$("notifImgUrl").addEventListener("input", updateNotifPreview);
 
-  const copyActions = [
-    ["Copy Song ID", o.id],
-    ["Copy MP3 Link", o.mp3Link],
-    ["Copy Cover Link", o.thumbLink],
-    ["Copy JSON Snippet", jsonSnippet]
-  ];
+$("notifImgFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  $("notifImgName").textContent = file.name;
+  const url = URL.createObjectURL(file);
+  $("notifImgThumb").style.backgroundImage = `url("${url}")`;
+  $("notifImgThumb").textContent = "";
+  $("dropNotifImg").classList.add("filled");
 
-  copyActions.forEach(([label, val]) => {
-    const b = document.createElement("button");
-    b.textContent = label;
-    b.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(val);
-        b.textContent = "Copied!";
-        setTimeout(() => b.textContent = label, 1200);
-      } catch(e) {
-        prompt("Copy this:", val);
-      }
+  try {
+    const b64 = await toBase64(file);
+    notifImgBase64 = `data:${file.type};base64,${b64}`;
+    updateNotifPreview();
+  } catch {}
+});
+
+let driveSongsLoaded = false;
+async function loadDriveSongsForSelect() {
+  if (driveSongsLoaded) return;
+  try {
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q='${DRIVE_FOLDER_ID}'+in+parents+and+trashed=false&fields=files(id,name,mimeType)&pageSize=50&key=${DRIVE_API_KEY}`);
+    const data = await res.json();
+    const audios = (data.files || []).filter(f => f.mimeType.startsWith('audio/') || f.name.endsWith('.mp3'));
+    const select = $("notifSongSelect");
+    audios.forEach(a => {
+      const opt = document.createElement("option");
+      opt.value = a.id;
+      opt.textContent = a.name.replace(/\.[^.]+$/, '');
+      select.appendChild(opt);
+    });
+    driveSongsLoaded = true;
+  } catch {}
+}
+
+$("btnSendNotif").addEventListener("click", async () => {
+  const title = $("notifTitle").value.trim() || "Hey {name}! 🌙";
+  const tagline = $("notifTagline").value.trim();
+  const imageUrl = notifImgBase64 || $("notifImgUrl").value.trim();
+  const songId = $("notifSongSelect").value;
+
+  if (!tagline) {
+    showStatus($("notifStatus"), "Please enter a notification tagline / message.", "err");
+    return;
+  }
+
+  $("btnSendNotif").disabled = true;
+  $("notifBtnText").textContent = "Broadcasting to Moonlight App...";
+  showStatus($("notifStatus"), "Publishing notification to all Moonlight users...", "info");
+
+  try {
+    const payload = {
+      key: SECRET_KEY,
+      action: "set_notification",
+      id: "n_" + Date.now(),
+      title: title,
+      tagline: tagline,
+      imageUrl: imageUrl,
+      songId: songId,
+      active: true
     };
-    copyRow.appendChild(b);
-  });
 
-  const tip = document.createElement("div");
-  tip.className = "app-sync-tip";
-  tip.innerHTML = "\uD83D\uDCF1 <b>Moonlight App Sync:</b> Moonlight App open karein aur Home screen par <b>Refresh (\uD83D\uDD04)</b> icon dabayein. Ye naya song turant play hone ke liye add ho jayega!";
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
 
-  box.append(t, a, idTag, copyRow, tip);
-  el.append(img, box);
-  $("list").prepend(el);
+    const out = await res.json();
+    if (!out.ok) throw new Error(out.error || "Failed to broadcast");
+
+    showStatus($("notifStatus"), "🎉 Notification is now LIVE! App users will see this personalized notification.", "ok");
+  } catch (err) {
+    showStatus($("notifStatus"), "Error: " + err.message + ". (Make sure to update Apps Script code)", "err");
+  } finally {
+    $("btnSendNotif").disabled = false;
+    $("notifBtnText").textContent = "🚀 Broadcast Notification to App";
+  }
+});
+
+$("btnClearNotif").addEventListener("click", async () => {
+  if (!confirm("Are you sure you want to deactivate the active notification?")) return;
+
+  showStatus($("notifStatus"), "Deactivating notification...", "info");
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        key: SECRET_KEY,
+        action: "clear_notification"
+      })
+    });
+    const out = await res.json();
+    if (!out.ok) throw new Error(out.error || "Failed to clear");
+
+    $("notifTagline").value = "";
+    updateNotifPreview();
+    showStatus($("notifStatus"), "Notification deactivated.", "ok");
+  } catch (err) {
+    showStatus($("notifStatus"), "Error clearing notification: " + err.message, "err");
+  }
+});
+
+function showStatus(el, msg, kind) {
+  if (!msg) { el.style.display = "none"; return; }
+  el.textContent = msg;
+  el.className = "status show " + (kind || "info");
 }
 
-// Initial calculation
-refresh();
+// Initial setup
+refreshUpload();
+updateNotifPreview();
 </script>
 </body>
 </html>

@@ -93,9 +93,28 @@ function audioUrl(fileId: string): string {
   return `${DRIVE_API}/files/${fileId}?${params.toString()}`;
 }
 
-function coverUrl(fileId: string, size = 'w800'): string {
-  const params = new URLSearchParams({ id: fileId, sz: size });
-  return `https://drive.google.com/thumbnail?${params.toString()}`;
+export function coverUrl(fileId: string, size: string | number = 'w800'): string {
+  const cleanSize = typeof size === 'number' ? `w${size}` : (size.startsWith('w') || size.startsWith('s') ? size : `w${size}`);
+  return `https://lh3.googleusercontent.com/d/${fileId}=${cleanSize}`;
+}
+
+export function thumbUrl(fileId: string, size: string | number = 'w300'): string {
+  const cleanSize = typeof size === 'number' ? `w${size}` : (size.startsWith('w') || size.startsWith('s') ? size : `w${size}`);
+  return `https://lh3.googleusercontent.com/d/${fileId}=${cleanSize}`;
+}
+
+export function toDirectCdnUrl(url?: string, defaultSize: string | number = 'w300'): string | undefined {
+  if (!url) return undefined;
+  if (url.includes('lh3.googleusercontent.com/d/')) {
+    return url.replace(/=sw(\d+)/, '=w$1');
+  }
+  const match = url.match(/[?&]id=([^&]+)/);
+  if (match) {
+    const sizeMatch = url.match(/[?&]sz=([^&]+)/);
+    const size = sizeMatch ? sizeMatch[1] : (typeof defaultSize === 'number' ? `w${defaultSize}` : defaultSize);
+    return `https://lh3.googleusercontent.com/d/${match[1]}=${size}`;
+  }
+  return url;
 }
 
 async function loadFromStorage(): Promise<Song[] | null> {
@@ -106,10 +125,12 @@ async function loadFromStorage(): Promise<Song[] | null> {
       if (data) {
         const parsed = JSON.parse(data);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Normalize audioUrl so any previously cached URLs are migrated to the working endpoint
+          // Normalize audioUrl and cover URLs so any previously cached URLs are migrated to the fast direct endpoint
           return (parsed as Song[]).map((song) => ({
             ...song,
             audioUrl: audioUrl(song.id),
+            coverUrl: toDirectCdnUrl(song.coverUrl, 'w800'),
+            thumb: toDirectCdnUrl(song.thumb, 'w300'),
           }));
         }
       }
@@ -132,7 +153,8 @@ async function listFolderFiles(): Promise<DriveFile[]> {
   do {
     const params = new URLSearchParams({
       q: `'${DRIVE_FOLDER_ID}' in parents and trashed = false`,
-      fields: 'nextPageToken,files(id,name,mimeType,thumbnailLink)',
+      fields: 'nextPageToken,files(id,name,mimeType,thumbnailLink,createdTime)',
+      orderBy: 'createdTime desc',
       pageSize: '1000',
       key: DRIVE_API_KEY,
     });
@@ -210,21 +232,41 @@ export async function fetchSongs(options: { force?: boolean } = {}): Promise<Son
   songsRequest = (async () => {
     try {
       const files = await listFolderFiles();
+      const imageFiles = files.filter(isImageFile);
       const idCovers = new Map(
-        files
-          .filter((file) => isImageFile(file) && file.name.startsWith('moonlight-cover-'))
+        imageFiles
+          .filter((file) => file.name.startsWith('moonlight-cover-'))
           .map((file) => [file.name.replace(/^moonlight-cover-/, '').replace(/\.[^.]+$/, ''), file] as const)
       );
       const covers = new Map(
-        files.filter(isImageFile).map((file) => [normalizeName(file.name), file] as const)
+        imageFiles.map((file) => [normalizeName(file.name), file] as const)
       );
+
+      function resolveCover(audioFile: DriveFile, fallbackTitle: string): DriveFile | undefined {
+        const byId = idCovers.get(audioFile.id);
+        if (byId) return byId;
+
+        const audioStem = normalizeName(audioFile.name);
+        const byFullName = covers.get(audioStem);
+        if (byFullName) return byFullName;
+
+        const titleStem = normalizeName(fallbackTitle);
+        const byTitle = covers.get(titleStem);
+        if (byTitle) return byTitle;
+
+        for (const [normImgName, imgFile] of covers.entries()) {
+          if (normImgName.length >= 4 && (audioStem.startsWith(normImgName) || normImgName.startsWith(titleStem))) {
+            return imgFile;
+          }
+        }
+        return undefined;
+      }
 
       const songs = files.filter(isAudioFile).map((file) => {
         const fallback = parseSongName(file.name);
-        const cover = idCovers.get(file.id) ?? covers.get(normalizeName(file.name));
-        const fullCover = cover ? coverUrl(cover.id, 'w800') : file.thumbnailLink;
-        // Optimized 300px thumbnail loads 5-10x faster than full 1000px art
-        const thumbCover = cover ? coverUrl(cover.id, 'w300') : file.thumbnailLink;
+        const cover = resolveCover(file, fallback.title);
+        const fullCover = cover ? coverUrl(cover.id, 'w800') : toDirectCdnUrl(file.thumbnailLink, 'w800');
+        const thumbCover = cover ? thumbUrl(cover.id, 'w300') : toDirectCdnUrl(file.thumbnailLink, 'w300');
 
         return {
           id: file.id,

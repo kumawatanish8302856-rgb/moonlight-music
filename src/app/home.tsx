@@ -2,12 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from '../components/BottomNav';
 import Cover from '../components/Cover';
 import { playerStore, useLibrary, usePlayback, usePlaying, type Song } from '../lib/playerStore';
-import { TAG_SYNONYMS } from '../lib/songs';
+import { toDirectCdnUrl } from '../lib/songs';
 
 // ---------- Moonlight theme ----------
 const MOON = {
@@ -372,25 +372,31 @@ export default function HomeScreen() {
   const { songs, loading, error } = useLibrary();
   const { current } = usePlayback();
   const playing = usePlaying();
-  const shuffledSongs = useMemo(() => shuffleSongs(songs), [songs]);
-
-  // Dynamically match songs to chosen mood, with graceful fallback to shuffled songs (limited to 4 songs for the 1st row)
   const mood = MOODS.find((m) => m.id === moodId) ?? MOODS[0];
-  const hits = useMemo(() => {
-    const keywords = TAG_SYNONYMS[mood.id] ?? [mood.id];
-    const matched = songs.filter((s) => {
-      const text = `${s.title} ${s.artist}`.toLowerCase();
-      return keywords.some((k) => text.includes(k));
-    });
-    return matched.length >= 2 ? pick(matched, 0, 4) : pick(shuffledSongs, 0, 4);
-  }, [mood.id, songs, shuffledSongs]);
+  // Top 5 recently added songs in the app
+  const newSongs = useMemo(() => songs.slice(0, 5), [songs]);
 
-  const romance = useMemo(() => pick(shuffledSongs, 10, 10), [shuffledSongs]);
+  // Remaining other songs shuffled for the downside sections
+  const remainingSongs = useMemo(() => (songs.length > 5 ? songs.slice(5) : songs), [songs]);
+  const shuffledRemaining = useMemo(() => shuffleSongs(remainingSongs), [remainingSongs]);
+
+  const romance = useMemo(() => pick(shuffledRemaining, 0, 10), [shuffledRemaining]);
   // 4 rows x 3 columns = 12 songs for Quick picks
-  const quickPicks = useMemo(() => pick(shuffledSongs, 3, 12), [shuffledSongs]);
-  const videos = useMemo(() => pick(shuffledSongs, 7, 8), [shuffledSongs]);
-  const shorts = useMemo(() => pick(shuffledSongs, 12, 12), [shuffledSongs]);
-  const mashups = useMemo(() => pick(shuffledSongs, 20, 12), [shuffledSongs]);
+  const quickPicks = useMemo(() => pick(shuffledRemaining, 3, 12), [shuffledRemaining]);
+  const videos = useMemo(() => pick(shuffledRemaining, 7, 8), [shuffledRemaining]);
+  const shorts = useMemo(() => pick(shuffledRemaining, 12, 12), [shuffledRemaining]);
+  const mashups = useMemo(() => pick(shuffledRemaining, 18, 12), [shuffledRemaining]);
+
+  // Prefetch covers for zero-delay instant display using direct Google CDN
+  useEffect(() => {
+    if (songs.length > 0) {
+      const topThumbnails = songs
+        .slice(0, 20)
+        .map((s) => toDirectCdnUrl(s.thumb || s.coverUrl, 'w300'))
+        .filter((u): u is string => Boolean(u));
+      void Image.prefetch(topThumbnails, 'memory-disk');
+    }
+  }, [songs]);
 
   useEffect(() => {
     const state = playerStore.getState();
@@ -417,7 +423,7 @@ export default function HomeScreen() {
       style={styles.container}
     >
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <StatusBar barStyle="light-content" backgroundColor="#1b1040" />
+        <StatusBar style="light" />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -497,7 +503,7 @@ export default function HomeScreen() {
               if (current) {
                 router.push('/player');
               } else {
-                playFrom(shuffledSongs, 0);
+                playFrom(shuffledRemaining, 0);
               }
             }}
             style={styles.heroWrap}
@@ -537,9 +543,9 @@ export default function HomeScreen() {
 
           {/* Arrangement 3: square carousels at the very top */}
           <SquareSection
-            title="Hits for you"
-            subtitle={mood.title.toUpperCase()}
-            songs={hits}
+            title="New"
+            subtitle="RECENTLY ADDED"
+            songs={newSongs}
             onPlay={playFrom}
             onPlayAll={playAll}
           />

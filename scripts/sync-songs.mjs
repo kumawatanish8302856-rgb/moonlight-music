@@ -48,9 +48,8 @@ function audioUrl(fileId) {
   return `${DRIVE_API}/files/${fileId}?${params.toString()}`;
 }
 
-function coverUrl(fileId, size = 'w800') {
-  const params = new URLSearchParams({ id: fileId, sz: size });
-  return `https://drive.google.com/thumbnail?${params.toString()}`;
+function coverUrl(fileId, size = 800) {
+  return `https://lh3.googleusercontent.com/d/${fileId}=s${size}`;
 }
 
 async function listFolderFiles() {
@@ -60,7 +59,8 @@ async function listFolderFiles() {
   do {
     const params = new URLSearchParams({
       q: `'${DRIVE_FOLDER_ID}' in parents and trashed = false`,
-      fields: 'nextPageToken,files(id,name,mimeType,thumbnailLink)',
+      fields: 'nextPageToken,files(id,name,mimeType,thumbnailLink,createdTime)',
+      orderBy: 'createdTime desc',
       pageSize: '1000',
       key: DRIVE_API_KEY,
     });
@@ -85,20 +85,41 @@ async function main() {
   const files = await listFolderFiles();
   console.log(`📁 Found ${files.length} total files in folder.`);
 
+  const imageFiles = files.filter(isImageFile);
   const idCovers = new Map(
-    files
-      .filter((file) => isImageFile(file) && file.name.startsWith('moonlight-cover-'))
+    imageFiles
+      .filter((file) => file.name.startsWith('moonlight-cover-'))
       .map((file) => [file.name.replace(/^moonlight-cover-/, '').replace(/\.[^.]+$/, ''), file])
   );
   const covers = new Map(
-    files.filter(isImageFile).map((file) => [normalizeName(file.name), file])
+    imageFiles.map((file) => [normalizeName(file.name), file])
   );
+
+  function resolveCover(audioFile, fallbackTitle) {
+    const byId = idCovers.get(audioFile.id);
+    if (byId) return byId;
+
+    const audioStem = normalizeName(audioFile.name);
+    const byFullName = covers.get(audioStem);
+    if (byFullName) return byFullName;
+
+    const titleStem = normalizeName(fallbackTitle);
+    const byTitle = covers.get(titleStem);
+    if (byTitle) return byTitle;
+
+    for (const [normImgName, imgFile] of covers.entries()) {
+      if (normImgName.length >= 4 && (audioStem.startsWith(normImgName) || normImgName.startsWith(titleStem))) {
+        return imgFile;
+      }
+    }
+    return undefined;
+  }
 
   const songs = files.filter(isAudioFile).map((file) => {
     const fallback = parseSongName(file.name);
-    const cover = idCovers.get(file.id) ?? covers.get(normalizeName(file.name));
-    const fullCover = cover ? coverUrl(cover.id, 'w800') : file.thumbnailLink;
-    const thumbCover = cover ? coverUrl(cover.id, 'w300') : file.thumbnailLink;
+    const cover = resolveCover(file, fallback.title);
+    const fullCover = cover ? coverUrl(cover.id, 800) : file.thumbnailLink;
+    const thumbCover = cover ? coverUrl(cover.id, 400) : file.thumbnailLink;
 
     return {
       id: file.id,

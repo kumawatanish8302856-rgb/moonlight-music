@@ -2,13 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Keyboard,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -339,7 +339,7 @@ export default function SearchScreen() {
       style={styles.container}
     >
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <StatusBar barStyle="light-content" backgroundColor="#1b1040" />
+        <StatusBar style="light" />
 
         {/* Header */}
         <View style={styles.header}>

@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -107,7 +107,7 @@ export default function ProfileScreen() {
   return (
     <LinearGradient colors={['#1b1040', BG, BG]} locations={[0, 0.4, 1]} style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <StatusBar barStyle="light-content" backgroundColor="#1b1040" />
+        <StatusBar style="light" />
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator color="#a78bfa" />

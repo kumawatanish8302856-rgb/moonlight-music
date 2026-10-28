@@ -26,6 +26,24 @@ export function gradientFor(seed?: string | number): readonly [string, string] {
   return GRADIENTS[hash % GRADIENTS.length];
 }
 
+function getFastCoverUri(uri?: string, size = 300): { primary: string; fallback?: string } | null {
+  if (!uri) return null;
+  if (uri.includes('lh3.googleusercontent.com/d/')) {
+    const cleaned = uri.replace(/=sw(\d+)/, '=w$1');
+    return { primary: cleaned };
+  }
+  const match = uri.match(/[?&]id=([^&]+)/);
+  if (match) {
+    const fileId = match[1];
+    const sizeParam = size <= 310 ? 'w300' : 'w800';
+    return {
+      primary: `https://lh3.googleusercontent.com/d/${fileId}=${sizeParam}`,
+      fallback: uri,
+    };
+  }
+  return { primary: uri };
+}
+
 const Cover = memo(function Cover({
   song,
   size,
@@ -35,19 +53,35 @@ const Cover = memo(function Cover({
   size: number;
   radius: number;
 }) {
-  // Use lightweight 300px thumb for small covers (<=120px) to boost performance and speed up loading
-  const imageUri = (size <= 120 ? song.thumb : song.coverUrl) || song.thumb || song.coverUrl;
-  const [failedImageUri, setFailedImageUri] = useState<string | null>(null);
+  const rawUri = (size <= 310 ? song.thumb : song.coverUrl) || song.thumb || song.coverUrl;
+  const uris = React.useMemo(() => getFastCoverUri(rawUri, size), [rawUri, size]);
+  const [useFallback, setUseFallback] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  if (imageUri && failedImageUri !== imageUri) {
+  // Reset when song changes
+  React.useEffect(() => {
+    setUseFallback(false);
+    setFailed(false);
+  }, [rawUri]);
+
+  const activeUri = uris ? (useFallback ? uris.fallback : uris.primary) : null;
+
+  if (activeUri && !failed) {
     return (
       <Image
-        source={{ uri: imageUri }}
+        source={{ uri: activeUri }}
         style={{ width: size, height: size, borderRadius: radius }}
         contentFit="cover"
-        transition={150}
+        transition={100}
         cachePolicy="memory-disk"
-        onError={() => setFailedImageUri(imageUri)}
+        priority={size <= 310 ? 'high' : 'normal'}
+        onError={() => {
+          if (!useFallback && uris?.fallback && uris.fallback !== uris.primary) {
+            setUseFallback(true);
+          } else {
+            setFailed(true);
+          }
+        }}
       />
     );
   }

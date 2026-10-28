@@ -2,13 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayerStatus, type AudioPlayer } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   BackHandler,
   Dimensions,
   PanResponder,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -216,7 +216,7 @@ export default function PlayerScreen() {
     return (
       <LinearGradient colors={['#2a1659', '#120d22', MOON.bg]} style={styles.container}>
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 24 }} edges={['top', 'bottom']}>
-          <StatusBar barStyle="light-content" backgroundColor="#2a1659" />
+          <StatusBar style="light" />
           <View style={styles.header}>
             <TouchableOpacity style={styles.headerBtn} onPress={goBack}>
               <Ionicons name="chevron-down" size={26} color={MOON.text} />
@@ -259,7 +259,7 @@ export default function PlayerScreen() {
       />
 
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 24 }} edges={['top', 'bottom']}>
-        <StatusBar barStyle="light-content" backgroundColor="#08060f" />
+        <StatusBar style="light" />
 
         {/* Header */}
         <View style={styles.header}>
