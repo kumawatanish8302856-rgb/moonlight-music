@@ -40,7 +40,9 @@
         }
       ],
       "expo-audio",
-      "expo-asset"
+      "./plugins/withAndroidAudioTrackControls",
+      "expo-asset",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

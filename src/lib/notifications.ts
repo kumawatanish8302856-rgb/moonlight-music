@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { requestNotificationPermissionsAsync } from 'expo-audio';
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 import { DRIVE_API_KEY, DRIVE_FOLDER_ID } from './songs';
 import { loadUserProfile } from './userProfile';
 
@@ -14,8 +16,9 @@ export type MoonlightNotification = {
 };
 
 const SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbzcXCIU6nAe3v8IbPi3DxVwZIfKSEr7RwMD8f9NMWk11s58G6pDY3xh1Ig7of5vXBi6/exec';
+  'https://script.google.com/macros/s/AKfycbw9IBSENtP-4p-mgDPxSPmnRdMfzFWxW_EQtGu9vQwZhhkW3vj2NenJ0pwx9SgKsgpd/exec';
 const LAST_SEEN_KEY = '@moonlight/last_seen_notification_id';
+const LAST_POPPED_KEY = '@moonlight/last_popped_banner_id';
 
 // Configure foreground notification behavior
 Notifications.setNotificationHandler({
@@ -40,6 +43,19 @@ export async function requestNotificationPermission(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function requestInitialPermissions(): Promise<{ notifications: boolean }> {
+  let notifGranted = false;
+  try {
+    if (Platform.OS === 'android') {
+      try {
+        await requestNotificationPermissionsAsync();
+      } catch {}
+    }
+    notifGranted = await requestNotificationPermission();
+  } catch {}
+  return { notifications: notifGranted };
 }
 
 export async function fetchActiveNotification(): Promise<MoonlightNotification | null> {
@@ -96,6 +112,20 @@ export async function getLastSeenNotificationId(): Promise<string | null> {
 export async function markNotificationAsSeen(id: string): Promise<void> {
   try {
     await AsyncStorage.setItem(LAST_SEEN_KEY, id);
+  } catch {}
+}
+
+export async function getLastPoppedBannerId(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(LAST_POPPED_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function markBannerAsPopped(id: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(LAST_POPPED_KEY, id);
   } catch {}
 }
 

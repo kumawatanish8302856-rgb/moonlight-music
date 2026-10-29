@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { requestInitialPermissions } from '../lib/notifications';
 import { saveUserProfile } from '../lib/userProfile';
 
 const BG = '#08060f';
@@ -63,6 +64,7 @@ export default function WelcomeScreen() {
           dateOfBirth: '',
           phone: '',
         });
+        void requestInitialPermissions();
         router.replace('/home');
       } catch {
         router.replace('/home');
@@ -109,6 +111,7 @@ export default function WelcomeScreen() {
         dateOfBirth: formattedDob,
         phone: formattedPhone,
       });
+      void requestInitialPermissions();
       router.replace('/home');
     } catch (saveError: unknown) {
       setError(saveError instanceof Error ? saveError.message : 'Could not save your profile.');

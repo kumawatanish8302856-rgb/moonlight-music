@@ -7,6 +7,8 @@ import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +19,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from '../components/BottomNav';
 import Cover from '../components/Cover';
+import {
+  fetchActiveNotification,
+  getLastSeenNotificationId,
+  getPersonalizedNotification,
+  markNotificationAsSeen,
+  requestInitialPermissions,
+} from '../lib/notifications';
 import { playerStore, useLibrary, usePlayback, usePlaying, type Song } from '../lib/playerStore';
 import { toDirectCdnUrl } from '../lib/songs';
 
@@ -103,6 +112,31 @@ function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
+}
+
+function filterSongsByKeywords(
+  allSongs: Song[],
+  keywords: string[],
+  fallbackPool: Song[],
+  count = 9
+): Song[] {
+  const matches = allSongs.filter((song) => {
+    const text = `${song.title} ${song.artist}`.toLowerCase();
+    return keywords.some((kw) => text.includes(kw.toLowerCase()));
+  });
+
+  const unique = new Set(matches.map((s) => s.id));
+  const result = [...matches];
+
+  for (const song of fallbackPool) {
+    if (result.length >= count) break;
+    if (!unique.has(song.id)) {
+      unique.add(song.id);
+      result.push(song);
+    }
+  }
+
+  return result.slice(0, count);
 }
 
 function formatCount(song: Song, unit: 'plays' | 'views'): string {
@@ -384,8 +418,148 @@ export default function HomeScreen() {
   // 4 rows x 3 columns = 12 songs for Quick picks
   const quickPicks = useMemo(() => pick(shuffledRemaining, 3, 12), [shuffledRemaining]);
   const videos = useMemo(() => pick(shuffledRemaining, 7, 8), [shuffledRemaining]);
-  const shorts = useMemo(() => pick(shuffledRemaining, 12, 12), [shuffledRemaining]);
-  const mashups = useMemo(() => pick(shuffledRemaining, 18, 12), [shuffledRemaining]);
+
+  // 4 Themed Trays: 3 rows x 3 columns = 9 songs each
+  const loveSongs = useMemo(
+    () =>
+      filterSongsByKeywords(
+        songs,
+        [
+          'love',
+          'ishq',
+          'romantic',
+          'valentine',
+          'mulaqat',
+          'dil',
+          'jaan',
+          'sahiba',
+          'ranjha',
+          'raanjhan',
+          'saath',
+          'bairan',
+          'heeriye',
+          'romance',
+        ],
+        shuffledRemaining,
+        9
+      ),
+    [songs, shuffledRemaining]
+  );
+
+  const partySongs = useMemo(
+    () =>
+      filterSongsByKeywords(
+        songs,
+        [
+          'party',
+          'dance',
+          'daru',
+          'badnaam',
+          'swalla',
+          'taki',
+          'nachu',
+          'wedding',
+          'garba',
+          'navratri',
+          'remix',
+          'club',
+          'bass',
+          'dj',
+          'fire',
+          'mega',
+          'reels',
+        ],
+        shuffledRemaining,
+        9
+      ),
+    [songs, shuffledRemaining]
+  );
+
+  const hindiSongs = useMemo(
+    () =>
+      filterSongsByKeywords(
+        songs,
+        [
+          'bollywood',
+          'hindi',
+          'arijit',
+          'darshan',
+          'vishal mishra',
+          'shreya',
+          'dunki',
+          'kabir',
+          'deepika',
+          'ranbir',
+          'pee loon',
+          'zaalima',
+          'chaleya',
+          'khat',
+          'kaise hua',
+          'gehra hua',
+          'sitaare',
+          'saiyaara',
+        ],
+        shuffledRemaining,
+        9
+      ),
+    [songs, shuffledRemaining]
+  );
+
+  const punjabiSongs = useMemo(
+    () =>
+      filterSongsByKeywords(
+        songs,
+        [
+          'punjabi',
+          'shubh',
+          'imran khan',
+          'karan aujla',
+          'talwiinder',
+          'talha anjum',
+          'amplifier',
+          'dil diyaan',
+          'tareefan',
+          'sohna',
+          'maan meri jaan',
+          'kalyani',
+          'suniyan',
+          'kaakan',
+          'wishes',
+          'afsos',
+          'departure lane',
+        ],
+        shuffledRemaining,
+        9
+      ),
+    [songs, shuffledRemaining]
+  );
+
+  const [notifModalVisible, setNotifModalVisible] = useState(false);
+  const [activeNotif, setActiveNotif] = useState<{
+    id: string;
+    title: string;
+    tagline: string;
+    imageUrl?: string;
+    songId?: string;
+  } | null>(null);
+  const [hasUnreadNotif, setHasUnreadNotif] = useState(false);
+
+  // Request permissions on launch + check active broadcast notification
+  useEffect(() => {
+    void requestInitialPermissions();
+
+    void (async () => {
+      try {
+        const notif = await fetchActiveNotification();
+        if (notif && notif.active !== false) {
+          const personalized = await getPersonalizedNotification(notif);
+          setActiveNotif({ ...personalized, id: notif.id });
+          const lastSeenId = await getLastSeenNotificationId();
+          setHasUnreadNotif(lastSeenId !== notif.id);
+        }
+      } catch {}
+    })();
+  }, []);
 
   // Prefetch covers for zero-delay instant display using direct Google CDN
   useEffect(() => {
@@ -442,20 +616,37 @@ export default function HomeScreen() {
                 <Text style={styles.brandName}>MOONLIGHT</Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.iconBtn}
-              onPress={() => void playerStore.loadSongs(true)}
-              disabled={loading}
-              accessibilityRole="button"
-              accessibilityLabel="Refresh songs and dashboard updates"
-              hitSlop={8}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color={MOON.primarySoft} />
-              ) : (
-                <Ionicons name="refresh" size={19} color={MOON.primarySoft} />
-              )}
-            </TouchableOpacity>
+            <View style={styles.headerIcons}>
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={() => setNotifModalVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Notifications"
+                hitSlop={8}
+              >
+                <Ionicons
+                  name={hasUnreadNotif ? 'notifications' : 'notifications-outline'}
+                  size={19}
+                  color={hasUnreadNotif ? '#fef3c7' : MOON.primarySoft}
+                />
+                {hasUnreadNotif && <View style={styles.unreadDot} />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={() => void playerStore.loadSongs(true)}
+                disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel="Refresh songs and dashboard updates"
+                hitSlop={8}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color={MOON.primarySoft} />
+                ) : (
+                  <Ionicons name="refresh" size={19} color={MOON.primarySoft} />
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
 
           <Text style={styles.tagline}>Music for the midnight mood</Text>
@@ -578,21 +769,44 @@ export default function HomeScreen() {
             onPlayAll={playAll}
           />
 
+          {/* 4 Themed Trays: 3 rows x 3 columns */}
           <GridSection
-            title="Heard in Shorts"
-            subtitle="TRENDING NOW"
-            songs={shorts}
-            rows={2}
+            title="Love"
+            subtitle="ROMANTIC VIBES"
+            songs={loveSongs}
+            rows={3}
+            columnsCount={3}
+            unit="plays"
+            onPlay={playFrom}
+            onPlayAll={playAll}
+          />
+          <GridSection
+            title="Party"
+            subtitle="HIGH ENERGY & CLUB"
+            songs={partySongs}
+            rows={3}
+            columnsCount={3}
             unit="views"
             onPlay={playFrom}
             onPlayAll={playAll}
           />
           <GridSection
-            title="Top Mashups"
-            subtitle="BEST OF BOTH WORLDS"
-            songs={mashups}
-            rows={2}
+            title="Hindi"
+            subtitle="BOLLYWOOD FAVORITES"
+            songs={hindiSongs}
+            rows={3}
+            columnsCount={3}
             unit="plays"
+            onPlay={playFrom}
+            onPlayAll={playAll}
+          />
+          <GridSection
+            title="Punjabi"
+            subtitle="DESI BEATS & SWAG"
+            songs={punjabiSongs}
+            rows={3}
+            columnsCount={3}
+            unit="views"
             onPlay={playFrom}
             onPlayAll={playAll}
           />
@@ -666,6 +880,96 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Notifications Modal */}
+        <Modal
+          visible={notifModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setNotifModalVisible(false)}
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setNotifModalVisible(false)}
+          >
+            <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalTitleRow}>
+                  <View style={styles.modalIconWrap}>
+                    <Ionicons name="notifications" size={18} color="#fef3c7" />
+                  </View>
+                  <Text style={styles.modalTitle}>Notifications</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setNotifModalVisible(false)}
+                  style={styles.modalCloseBtn}
+                  hitSlop={8}
+                >
+                  <Ionicons name="close" size={18} color={MOON.textDim} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 360 }}>
+                {activeNotif ? (
+                  <View style={styles.featuredNotifCard}>
+                    <View style={styles.featuredBadgeRow}>
+                      <View style={styles.liveChip}>
+                        <View style={styles.liveDot} />
+                        <Text style={styles.featuredBadgeText}>LATEST RELEASE</Text>
+                      </View>
+                      <Text style={styles.featuredTime}>Just now</Text>
+                    </View>
+                    <Text style={styles.featuredNotifTitle}>{activeNotif.title}</Text>
+                    <Text style={styles.featuredNotifTagline}>{activeNotif.tagline}</Text>
+                    {Boolean(activeNotif.songId) && (
+                      <TouchableOpacity
+                        style={styles.featuredPlayBtn}
+                        activeOpacity={0.85}
+                        onPress={async () => {
+                          setNotifModalVisible(false);
+                          if (activeNotif?.id) {
+                            await markNotificationAsSeen(activeNotif.id);
+                            setHasUnreadNotif(false);
+                          }
+                          const idx = songs.findIndex((s) => s.id === activeNotif.songId);
+                          if (idx >= 0) {
+                            playerStore.playQueue(songs, idx);
+                            router.push('/player');
+                          }
+                        }}
+                      >
+                        <Ionicons name="play" size={13} color="#1b1040" style={{ marginRight: 6 }} />
+                        <Text style={styles.featuredPlayText}>Play Featured Song</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ) : (
+                  <View style={styles.emptyNotifBox}>
+                    <Ionicons name="notifications-outline" size={36} color={MOON.textDim} style={{ marginBottom: 6 }} />
+                    <Text style={styles.emptyNotifTitle}>No New Notifications</Text>
+                    <Text style={styles.emptyNotifSub}>
+                      You are all caught up! New releases and announcements will appear here.
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
+
+              <TouchableOpacity
+                style={styles.modalDismissBtn}
+                activeOpacity={0.85}
+                onPress={async () => {
+                  if (activeNotif?.id) {
+                    await markNotificationAsSeen(activeNotif.id);
+                    setHasUnreadNotif(false);
+                  }
+                  setNotifModalVisible(false);
+                }}
+              >
+                <Text style={styles.modalDismissText}>Mark all as read</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
         {/* Bottom nav */}
         <BottomNav active="home" />
       </SafeAreaView>
@@ -698,7 +1002,7 @@ const styles = StyleSheet.create({
   },
   greeting: { color: MOON.textDim, fontSize: 12 },
   brandName: { color: MOON.text, fontSize: 17, fontWeight: 'bold', letterSpacing: 1 },
-  headerIcons: { flexDirection: 'row' },
+  headerIcons: { flexDirection: 'row', alignItems: 'center' },
   iconBtn: {
     width: 38,
     height: 38,
@@ -707,6 +1011,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 10,
+    position: 'relative',
+  },
+  unreadDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#f43f5e',
+    borderWidth: 1.5,
+    borderColor: '#1a1430',
   },
 
   tagline: {
@@ -927,6 +1243,159 @@ const styles = StyleSheet.create({
   },
   footerAuthor: {
     color: MOON.primarySoft,
+    fontWeight: '600',
+  },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.72)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#16102a',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.3)',
+    padding: 20,
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  modalIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(139,92,246,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featuredNotifCard: {
+    backgroundColor: 'rgba(139,92,246,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.4)',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+  },
+  featuredBadgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  liveChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(244,63,94,0.18)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 5,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#f43f5e',
+  },
+  featuredBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#fecdd3',
+    letterSpacing: 0.6,
+  },
+  featuredTime: {
+    fontSize: 10,
+    color: MOON.textDim,
+  },
+  featuredNotifTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  featuredNotifTagline: {
+    fontSize: 13,
+    color: '#e9d5ff',
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  featuredPlayBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: MOON.primarySoft,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  featuredPlayText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1b1040',
+  },
+  emptyNotifBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+  },
+  emptyNotifTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  emptyNotifSub: {
+    fontSize: 12,
+    color: MOON.textDim,
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+  modalDismissBtn: {
+    marginTop: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalDismissText: {
+    color: MOON.primarySoft,
+    fontSize: 13,
     fontWeight: '600',
   },
 });

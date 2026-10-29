@@ -16,7 +16,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Cover, { gradientFor } from '../components/Cover';
+import ShareStoryModal from '../components/ShareStoryModal';
 import { GRADIENTS, MOON } from '../constants/moonlight';
+import { hapticLight } from '../lib/haptics';
 import { player, playerStore, toggleLikeSong, useIsSongLiked, usePlayback, usePlaying } from '../lib/playerStore';
 
 const BARS = Array.from({ length: 44 }, (_, i) =>
@@ -186,6 +188,7 @@ export default function PlayerScreen() {
   const playing = usePlaying();
   const isLiked = useIsSongLiked(current?.id);
   const [scale] = useState(() => new Animated.Value(1));
+  const [shareModalVisible, setShareModalVisible] = useState(false);
 
   useEffect(() => {
     Animated.spring(scale, {
@@ -272,7 +275,18 @@ export default function PlayerScreen() {
               {index + 1} of {queue.length}
             </Text>
           </View>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => {
+              hapticLight();
+              setShareModalVisible(true);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Share Story Card"
+          >
+            <Ionicons name="share-social-outline" size={20} color={MOON.text} />
+          </TouchableOpacity>
         </View>
 
         {/* Artwork */}
@@ -293,19 +307,34 @@ export default function PlayerScreen() {
               {current.artist}
             </Text>
           </View>
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={() => void toggleLikeSong(current)}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={isLiked ? 'Unlike song' : 'Like song'}
-          >
-            <Ionicons
-              name={isLiked ? 'heart' : 'heart-outline'}
-              size={28}
-              color={isLiked ? '#f43f5e' : MOON.textDim}
-            />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={() => {
+                hapticLight();
+                setShareModalVisible(true);
+              }}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Share Story Card"
+            >
+              <Ionicons name="share-social-outline" size={24} color={MOON.primarySoft} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={() => void toggleLikeSong(current)}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={isLiked ? 'Unlike song' : 'Like song'}
+            >
+              <Ionicons
+                name={isLiked ? 'heart' : 'heart-outline'}
+                size={28}
+                color={isLiked ? '#f43f5e' : MOON.textDim}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Progress />
@@ -339,6 +368,12 @@ export default function PlayerScreen() {
         </View>
 
         <View style={{ height: 28 }} />
+
+        <ShareStoryModal
+          visible={shareModalVisible}
+          song={current}
+          onClose={() => setShareModalVisible(false)}
+        />
       </SafeAreaView>
     </View>
   );

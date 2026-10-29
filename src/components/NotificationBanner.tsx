@@ -14,8 +14,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MOON } from '../constants/moonlight';
 import {
   fetchActiveNotification,
-  getLastSeenNotificationId,
+  getLastPoppedBannerId,
   getPersonalizedNotification,
+  markBannerAsPopped,
   markNotificationAsSeen,
   triggerSystemNotification,
   type MoonlightNotification,
@@ -99,8 +100,8 @@ const NotificationBanner = memo(function NotificationBanner() {
       const active = await fetchActiveNotification();
       if (!active || !active.active) return;
 
-      const lastSeenId = await getLastSeenNotificationId();
-      if (lastSeenId === active.id) return;
+      const lastPoppedId = await getLastPoppedBannerId();
+      if (lastPoppedId === active.id) return;
 
       // Personalized title and tagline
       const custom = await getPersonalizedNotification(active);
@@ -111,8 +112,8 @@ const NotificationBanner = memo(function NotificationBanner() {
       // Show in-app banner
       showBanner(active, custom);
 
-      // Mark as seen so user is not spammed
-      await markNotificationAsSeen(active.id);
+      // Mark banner as popped so user is not repeatedly interrupted
+      await markBannerAsPopped(active.id);
     } catch {}
   }, [showBanner]);
 
@@ -125,11 +126,14 @@ const NotificationBanner = memo(function NotificationBanner() {
     return () => clearTimeout(timer);
   }, [checkNotification]);
 
-  const handlePress = useCallback(() => {
+  const handlePress = useCallback(async () => {
     if (!personalized) return;
     const songId = personalized.songId;
 
     hideBanner();
+    if (notification?.id) {
+      await markNotificationAsSeen(notification.id);
+    }
 
     if (songId) {
       const targetIndex = songs.findIndex((s) => s.id === songId);
@@ -139,7 +143,7 @@ const NotificationBanner = memo(function NotificationBanner() {
         return;
       }
     }
-  }, [personalized, songs, hideBanner, router]);
+  }, [personalized, notification, songs, hideBanner, router]);
 
   if (!notification || !personalized) return null;
 

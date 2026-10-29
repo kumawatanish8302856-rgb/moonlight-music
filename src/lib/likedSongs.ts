@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useSyncExternalStore } from 'react';
+import { hapticLight, hapticSuccess } from './haptics';
 import type { Song } from './songs';
 
 export const LIKED_SONGS_KEY = 'moonlight_liked_songs_v1';
@@ -150,6 +151,12 @@ export async function toggleLikeSong(song: Song): Promise<boolean> {
     };
     cachedLikedSongs = [newLiked, ...cachedLikedSongs];
     nowLiked = true;
+  }
+
+  if (nowLiked) {
+    hapticSuccess();
+  } else {
+    hapticLight();
   }
 
   notify();

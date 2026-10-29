@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { memo, useEffect } from 'react';
 import { BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { hapticSelection } from '../lib/haptics';
 
 const MOON = {
   bar: '#150f2b',
@@ -39,6 +40,7 @@ const BottomNav = memo(function BottomNav({ active }: { active: 'home' | 'search
               key={t.key}
               activeOpacity={0.85}
               onPress={() => {
+                hapticSelection();
                 if (!isActive) router.replace(t.path);
               }}
               style={styles.tabTouch}

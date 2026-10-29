@@ -1,6 +1,7 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
 import { useEffect, useState, useSyncExternalStore } from 'react';
+import { hapticLight, hapticMedium, hapticSelection } from './haptics';
 import { fetchSongs, songsErrorMessage, type Song } from './songs';
 import { recordSongPlayed, recordToSong, useRecentlyPlayed, clearRecentlyPlayed, type RecentlyPlayedRecord } from './recentlyPlayed';
 import {
@@ -260,18 +261,21 @@ export const playerStore = {
 
   playQueue(queue: Song[], index: number) {
     if (!queue[index]) return;
+    hapticLight();
     set({ queue, index });
     loadCurrent();
   },
 
   playShuffled(queue: Song[]) {
     if (queue.length === 0) return;
+    hapticSelection();
     set({ shuffle: true });
     playerStore.playQueue(queue, Math.floor(Math.random() * queue.length));
   },
 
   toggle() {
     if (state.index < 0 || !player) return;
+    hapticMedium();
     if (player.playing) {
       player.pause();
       return;
@@ -286,12 +290,14 @@ export const playerStore = {
   next() {
     const i = pickIndex(true);
     if (i === null) return;
+    hapticLight();
     set({ index: i });
     loadCurrent();
   },
 
   prev() {
     if (state.index < 0 || !player) return;
+    hapticLight();
     if (player.currentTime > 3 || state.index === 0) {
       player.seekTo(0).catch(() => {});
       return;
@@ -305,10 +311,12 @@ export const playerStore = {
   },
 
   toggleShuffle() {
+    hapticSelection();
     set({ shuffle: !state.shuffle });
   },
 
   toggleRepeat() {
+    hapticSelection();
     set({ repeat: !state.repeat });
   },
 };
