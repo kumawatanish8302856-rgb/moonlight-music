@@ -15,6 +15,7 @@ import { MOON } from '../constants/moonlight';
 import {
   fetchActiveNotification,
   getLastPoppedBannerId,
+  getNotificationsEnabled,
   getPersonalizedNotification,
   markBannerAsPopped,
   markNotificationAsSeen,
@@ -97,6 +98,9 @@ const NotificationBanner = memo(function NotificationBanner() {
 
   const checkNotification = useCallback(async () => {
     try {
+      const enabled = await getNotificationsEnabled();
+      if (!enabled) return;
+
       const active = await fetchActiveNotification();
       if (!active || !active.active) return;
 

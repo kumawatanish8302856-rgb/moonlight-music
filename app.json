@@ -42,7 +42,8 @@
       "expo-audio",
       "./plugins/withAndroidAudioTrackControls",
       "expo-asset",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,

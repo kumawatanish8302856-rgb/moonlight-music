@@ -23,23 +23,51 @@ async function patchExpoAudio(projectRoot) {
   try {
     let service = await fs.readFile(servicePath, 'utf8');
 
-    // 1. Add onTaskRemoved to dismiss notification and stop service when app is closed from recents
-    if (!service.includes('override fun onTaskRemoved')) {
-      const target = '  override fun onDestroy() {\n';
-      const replacement =
-        '  override fun onTaskRemoved(rootIntent: Intent?) {\n' +
-        '    super.onTaskRemoved(rootIntent)\n' +
-        '    clearSessionInternal()\n' +
-        '    hideNotification()\n' +
-        '    stopSelf()\n' +
-        '  }\n\n' +
-        '  override fun onDestroy() {\n' +
-        '    clearSessionInternal()\n' +
-        '    hideNotification()\n';
+    // 1. Add robust onTaskRemoved to stop playback, release session, and dismiss notification when app is swiped away from recents
+    const target = '  override fun onDestroy() {\n';
+    const cleanOnTaskRemoved =
+      '  private fun hideAllAudioNotifications() {\n' +
+      '    val notificationManager: NotificationManager =\n' +
+      '      getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager\n' +
+      '    try {\n' +
+      '      notificationManager.cancel(notificationId)\n' +
+      '      notificationManager.cancel(CHANNEL_ID.hashCode())\n' +
+      '      notificationManager.cancelAll()\n' +
+      '    } catch (e: Exception) {}\n' +
+      '  }\n\n' +
+      '  override fun onTaskRemoved(rootIntent: Intent?) {\n' +
+      '    try {\n' +
+      '      currentPlayable?.player?.pause()\n' +
+      '      currentPlayable?.player?.stop()\n' +
+      '    } catch (e: Exception) {}\n' +
+      '    removePlayerListener()\n' +
+      '    currentMetadata = null\n' +
+      '    try {\n' +
+      '      mediaSession?.release()\n' +
+      '    } catch (e: Exception) {}\n' +
+      '    mediaSession = null\n' +
+      '    sessionMetadataPlayer = null\n' +
+      '    clearArtwork()\n' +
+      '    currentPlayable = null\n' +
+      '    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {\n' +
+      '      stopForeground(STOP_FOREGROUND_REMOVE)\n' +
+      '    } else {\n' +
+      '      @Suppress("DEPRECATION")\n' +
+      '      stopForeground(true)\n' +
+      '    }\n' +
+      '    hideAllAudioNotifications()\n' +
+      '    stopSelf()\n' +
+      '    super.onTaskRemoved(rootIntent)\n' +
+      '  }\n\n';
 
-      if (service.includes(target)) {
-        service = service.replace(target, replacement);
-      }
+    if (service.includes('override fun onTaskRemoved')) {
+      // Replace existing onTaskRemoved with enhanced version
+      service = service.replace(
+        /  override fun onTaskRemoved[\s\S]*?super\.onTaskRemoved\(rootIntent\)\s*\}/,
+        cleanOnTaskRemoved.trim()
+      );
+    } else if (service.includes(target)) {
+      service = service.replace(target, cleanOnTaskRemoved + target);
     }
 
     // 2. Allow user to swipe away notification when paused (detach from foreground)

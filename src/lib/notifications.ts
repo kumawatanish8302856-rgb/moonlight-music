@@ -19,6 +19,7 @@ const SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbw9IBSENtP-4p-mgDPxSPmnRdMfzFWxW_EQtGu9vQwZhhkW3vj2NenJ0pwx9SgKsgpd/exec';
 const LAST_SEEN_KEY = '@moonlight/last_seen_notification_id';
 const LAST_POPPED_KEY = '@moonlight/last_popped_banner_id';
+const NOTIFICATION_SETTING_KEY = '@moonlight/notifications_enabled';
 
 // Configure foreground notification behavior
 Notifications.setNotificationHandler({
@@ -63,38 +64,49 @@ export async function fetchActiveNotification(): Promise<MoonlightNotification |
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(SCRIPT_URL, { signal: controller.signal });
-    clearTimeout(timeout);
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.ok && data.notification && data.notification.active !== false) {
-        return data.notification as MoonlightNotification;
+    try {
+      const res = await fetch(SCRIPT_URL, { signal: controller.signal });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.ok && data.notification && data.notification.active !== false) {
+          return data.notification as MoonlightNotification;
+        }
       }
+    } finally {
+      clearTimeout(timeout);
     }
   } catch {}
 
   // 2. Fallback: Check Google Drive folder for moonlight-notification.json
   try {
-    const query = encodeURIComponent(
-      `'${DRIVE_FOLDER_ID}' in parents and name = 'moonlight-notification.json' and trashed = false`
-    );
-    const res = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id)&key=${DRIVE_API_KEY}`
-    );
-    if (res.ok) {
-      const json = await res.json();
-      const fileId = json.files?.[0]?.id;
-      if (fileId) {
-        const fileRes = await fetch(
-          `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${DRIVE_API_KEY}`
-        );
-        if (fileRes.ok) {
-          const notif = await fileRes.json();
-          if (notif && notif.active !== false) {
-            return notif as MoonlightNotification;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    try {
+      const query = encodeURIComponent(
+        `'${DRIVE_FOLDER_ID}' in parents and name = 'moonlight-notification.json' and trashed = false`
+      );
+      const res = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id)&key=${DRIVE_API_KEY}`,
+        { signal: controller.signal }
+      );
+      if (res.ok) {
+        const json = await res.json();
+        const fileId = json.files?.[0]?.id;
+        if (fileId) {
+          const fileRes = await fetch(
+            `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${DRIVE_API_KEY}`,
+            { signal: controller.signal }
+          );
+          if (fileRes.ok) {
+            const notif = await fileRes.json();
+            if (notif && notif.active !== false) {
+              return notif as MoonlightNotification;
+            }
           }
         }
       }
+    } finally {
+      clearTimeout(timeout);
     }
   } catch {}
 
@@ -121,6 +133,21 @@ export async function getLastPoppedBannerId(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+export async function getNotificationsEnabled(): Promise<boolean> {
+  try {
+    const val = await AsyncStorage.getItem(NOTIFICATION_SETTING_KEY);
+    return val !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+export async function setNotificationsEnabled(enabled: boolean): Promise<void> {
+  try {
+    await AsyncStorage.setItem(NOTIFICATION_SETTING_KEY, enabled ? 'true' : 'false');
+  } catch {}
 }
 
 export async function markBannerAsPopped(id: string): Promise<void> {
@@ -157,6 +184,9 @@ export async function getPersonalizedNotification(
 export async function triggerSystemNotification(
   notification: MoonlightNotification
 ): Promise<void> {
+  const enabled = await getNotificationsEnabled();
+  if (!enabled) return;
+
   const granted = await requestNotificationPermission();
   if (!granted) return;
 

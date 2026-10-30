@@ -258,6 +258,14 @@ export default function PlayerScreen() {
     }, 900);
   }, [rightSeekAnim]);
 
+  // Clean up seek timers on unmount
+  useEffect(() => {
+    return () => {
+      if (leftTimer.current) clearTimeout(leftTimer.current);
+      if (rightTimer.current) clearTimeout(rightTimer.current);
+    };
+  }, []);
+
   useEffect(() => {
     Animated.spring(scale, {
       toValue: playing ? 1 : 0.9,
@@ -374,11 +382,6 @@ export default function PlayerScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Rewind 10 seconds"
                   >
-                    <View style={styles.seekHintPill}>
-                      <Ionicons name="play-back" size={12} color="rgba(255,255,255,0.85)" />
-                      <Text style={styles.seekHintText}>10s</Text>
-                    </View>
-
                     {/* Animated Ripple / Pulse Badge */}
                     <Animated.View
                       pointerEvents="none"
@@ -412,11 +415,6 @@ export default function PlayerScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Forward 10 seconds"
                   >
-                    <View style={styles.seekHintPill}>
-                      <Text style={styles.seekHintText}>10s</Text>
-                      <Ionicons name="play-forward" size={12} color="rgba(255,255,255,0.85)" />
-                    </View>
-
                     {/* Animated Ripple / Pulse Badge */}
                     <Animated.View
                       pointerEvents="none"
@@ -584,31 +582,12 @@ const styles = StyleSheet.create({
   seekSideLeft: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingLeft: 12,
+    alignItems: 'center',
   },
   seekSideRight: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingRight: 12,
-  },
-  seekHintPill: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(10, 6, 22, 0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 14,
-  },
-  seekHintText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3,
   },
   seekFeedbackOverlay: {
     ...StyleSheet.absoluteFill,

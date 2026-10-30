@@ -43,6 +43,12 @@ function parseSongName(name) {
   };
 }
 
+function formatCloudinaryUrl(url, size = 800) {
+  if (!url || !url.includes('res.cloudinary.com') || !url.includes('/image/upload/')) return url;
+  if (url.includes('/upload/w_') || url.includes('/upload/c_')) return url;
+  return url.replace('/upload/', `/upload/w_${size},h_${size},c_fill,q_auto,f_auto/`);
+}
+
 function audioUrl(fileId) {
   const params = new URLSearchParams({ alt: 'media', key: DRIVE_API_KEY });
   return `${DRIVE_API}/files/${fileId}?${params.toString()}`;
@@ -59,7 +65,7 @@ async function listFolderFiles() {
   do {
     const params = new URLSearchParams({
       q: `'${DRIVE_FOLDER_ID}' in parents and trashed = false`,
-      fields: 'nextPageToken,files(id,name,mimeType,thumbnailLink,createdTime)',
+      fields: 'nextPageToken,files(id,name,mimeType,thumbnailLink,description,createdTime)',
       orderBy: 'createdTime desc',
       pageSize: '1000',
       key: DRIVE_API_KEY,
@@ -115,11 +121,31 @@ async function main() {
     return undefined;
   }
 
+  const mapPath = path.resolve(__dirname, '../src/constants/cloudinary-covers.json');
+  let cloudinaryCoversMap = {};
+  if (fs.existsSync(mapPath)) {
+    try {
+      cloudinaryCoversMap = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+    } catch {}
+  }
+
   const songs = files.filter(isAudioFile).map((file) => {
     const fallback = parseSongName(file.name);
-    const cover = resolveCover(file, fallback.title);
-    const fullCover = cover ? coverUrl(cover.id, 800) : file.thumbnailLink;
-    const thumbCover = cover ? coverUrl(cover.id, 400) : file.thumbnailLink;
+    let fullCover;
+    let thumbCover;
+
+    const mappedCloudinary = (file.description && file.description.trim().startsWith('http'))
+      ? file.description.trim()
+      : cloudinaryCoversMap[file.id];
+
+    if (mappedCloudinary) {
+      fullCover = formatCloudinaryUrl(mappedCloudinary, 800);
+      thumbCover = formatCloudinaryUrl(mappedCloudinary, 400);
+    } else {
+      const cover = resolveCover(file, fallback.title);
+      fullCover = cover ? coverUrl(cover.id, 800) : file.thumbnailLink;
+      thumbCover = cover ? coverUrl(cover.id, 400) : file.thumbnailLink;
+    }
 
     return {
       id: file.id,
