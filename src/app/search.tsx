@@ -152,12 +152,6 @@ export default function SearchScreen() {
   const [results, setResults] = useState<Song[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [recents, setRecents] = useState<string[]>([
-    'Arijit Singh',
-    'Chill',
-    'Punjabi',
-    'Love songs',
-  ]);
 
   const reqId = useRef(0);
   const [retryKey, setRetryKey] = useState(0);
@@ -170,12 +164,6 @@ export default function SearchScreen() {
     } else if (!state.loaded && !state.loading) {
       void playerStore.loadSongs();
     }
-  }, []);
-
-  const addRecent = useCallback((q: string) => {
-    setRecents((r) =>
-      [q, ...r.filter((x) => x.toLowerCase() !== q.toLowerCase())].slice(0, 6)
-    );
   }, []);
 
   // ---------- Live search (debounced) ----------
@@ -224,30 +212,19 @@ export default function SearchScreen() {
     const q = query.trim();
     if (!q) return;
     Keyboard.dismiss();
-    addRecent(q);
-  }, [query, addRecent]);
+  }, [query]);
 
-  const onRecentPress = useCallback(
-    (r: string) => {
-      Keyboard.dismiss();
-      setMode('search');
-      setQuery(r);
-      addRecent(r);
-    },
-    [addRecent]
-  );
-
-  const runTag = useCallback(async (c: Category) => {
+  const runTagByName = useCallback(async (tag: string, displayTitle: string) => {
     Keyboard.dismiss();
     const id = ++reqId.current;
     setMode('tag');
-    setQuery(c.title);
+    setQuery(displayTitle);
     setLoading(true);
     setError('');
     setResults(null);
     try {
       const list = await songsByTag(
-        c.tag,
+        tag,
         libraryLoaded && !libraryError ? librarySongs : undefined
       );
       if (id !== reqId.current) return;
@@ -260,6 +237,10 @@ export default function SearchScreen() {
       if (id === reqId.current) setLoading(false);
     }
   }, [libraryLoaded, libraryError, librarySongs]);
+
+  const runTag = useCallback(async (c: Category) => {
+    await runTagByName(c.tag, c.title);
+  }, [runTagByName]);
 
   const clearAll = useCallback(() => {
     reqId.current++;
@@ -418,19 +399,126 @@ export default function SearchScreen() {
             {showBrowse && (
               <>
                 <View style={styles.block}>
-                  <Text style={styles.sectionTitle}>Recent nights</Text>
-                  <View style={styles.chipWrap}>
-                    {recents.map((r) => (
-                      <TouchableOpacity
-                        key={r}
-                        style={styles.chip}
-                        onPress={() => onRecentPress(r)}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="time-outline" size={14} color={MOON.primarySoft} />
-                        <Text style={styles.chipText}>{r}</Text>
-                      </TouchableOpacity>
-                    ))}
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>Featured Mashups</Text>
+                    <View style={styles.featuredKickerPill}>
+                      <Ionicons name="sparkles" size={11} color={MOON.primarySoft} style={{ marginRight: 4 }} />
+                      <Text style={styles.featuredKickerText}>SPECIALS</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.mashupCardsRow}>
+                    {/* Card 1: Singer Mashups */}
+                    <TouchableOpacity
+                      activeOpacity={0.88}
+                      style={styles.mashupCardTouch}
+                      onPress={() => runTagByName('singermashup', 'Singer Mashups')}
+                    >
+                      <View style={[styles.cardGlowWrapper, styles.singerCardGlow]}>
+                        <LinearGradient
+                          colors={['#271252', '#140a2c']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={[styles.mashupCard, styles.singerBorder]}
+                        >
+                          {/* Ambient luminous glow */}
+                          <LinearGradient
+                            colors={['rgba(139, 92, 246, 0.45)', 'rgba(99, 102, 241, 0.0)']}
+                            start={{ x: 0.5, y: 0 }}
+                            end={{ x: 0.5, y: 1 }}
+                            style={styles.ambientGlow}
+                          />
+
+                          {/* Decorative radar waveform rings with mic */}
+                          <View style={styles.radarGraphic} pointerEvents="none">
+                            <View style={[styles.radarRingOuter, { borderColor: 'rgba(167, 139, 250, 0.18)' }]}>
+                              <View style={[styles.radarRingInner, { borderColor: 'rgba(167, 139, 250, 0.38)' }]}>
+                                <Ionicons name="mic" size={20} color="#c4b5fd" />
+                              </View>
+                            </View>
+                          </View>
+
+                          {/* Top row: badge + equalizer accent */}
+                          <View style={styles.cardTopRow}>
+                            <View style={[styles.mashupBadge, styles.singerBadge]}>
+                              <Text style={styles.mashupBadgeText}>🎙️ ARTISTS</Text>
+                            </View>
+                            <View style={styles.equalizerRow}>
+                              <View style={[styles.equalizerBar, { height: 7, backgroundColor: '#a78bfa' }]} />
+                              <View style={[styles.equalizerBar, { height: 13, backgroundColor: '#c4b5fd' }]} />
+                              <View style={[styles.equalizerBar, { height: 9, backgroundColor: '#a78bfa' }]} />
+                            </View>
+                          </View>
+
+                          {/* Bottom row: text + interactive play CTA */}
+                          <View style={styles.cardBottomRow}>
+                            <View style={{ flex: 1, marginRight: 8 }}>
+                              <Text style={styles.mashupCardTitle} numberOfLines={1}>Singer Mashups</Text>
+                              <Text style={styles.singerSub} numberOfLines={1}>Arijit • Darshan • King</Text>
+                            </View>
+                            <View style={[styles.cardPlayBtn, styles.singerPlayBtn]}>
+                              <Ionicons name="play" size={13} color="#ffffff" style={{ marginLeft: 2 }} />
+                            </View>
+                          </View>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Card 2: Playlists Mashups */}
+                    <TouchableOpacity
+                      activeOpacity={0.88}
+                      style={styles.mashupCardTouch}
+                      onPress={() => runTagByName('playlistmashup', 'Playlists Mashups')}
+                    >
+                      <View style={[styles.cardGlowWrapper, styles.playlistCardGlow]}>
+                        <LinearGradient
+                          colors={['#4a0e2e', '#1c0515']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={[styles.mashupCard, styles.playlistBorder]}
+                        >
+                          {/* Ambient luminous glow */}
+                          <LinearGradient
+                            colors={['rgba(244, 63, 94, 0.45)', 'rgba(251, 146, 60, 0.0)']}
+                            start={{ x: 0.5, y: 0 }}
+                            end={{ x: 0.5, y: 1 }}
+                            style={styles.ambientGlow}
+                          />
+
+                          {/* Decorative vinyl grooves rings with disc */}
+                          <View style={styles.radarGraphic} pointerEvents="none">
+                            <View style={[styles.radarRingOuter, { borderColor: 'rgba(251, 113, 133, 0.18)' }]}>
+                              <View style={[styles.radarRingInner, { borderColor: 'rgba(251, 113, 133, 0.38)' }]}>
+                                <Ionicons name="disc" size={20} color="#fda4af" />
+                              </View>
+                            </View>
+                          </View>
+
+                          {/* Top row: badge + equalizer accent */}
+                          <View style={styles.cardTopRow}>
+                            <View style={[styles.mashupBadge, styles.playlistBadge]}>
+                              <Text style={styles.mashupBadgeText}>🔥 PLAYLISTS</Text>
+                            </View>
+                            <View style={styles.equalizerRow}>
+                              <View style={[styles.equalizerBar, { height: 9, backgroundColor: '#fb7185' }]} />
+                              <View style={[styles.equalizerBar, { height: 14, backgroundColor: '#fda4af' }]} />
+                              <View style={[styles.equalizerBar, { height: 6, backgroundColor: '#fb7185' }]} />
+                            </View>
+                          </View>
+
+                          {/* Bottom row: text + interactive play CTA */}
+                          <View style={styles.cardBottomRow}>
+                            <View style={{ flex: 1, marginRight: 8 }}>
+                              <Text style={styles.mashupCardTitle} numberOfLines={1}>Playlists Mashups</Text>
+                              <Text style={styles.playlistSub} numberOfLines={1}>Party • Non-stop • Hits</Text>
+                            </View>
+                            <View style={[styles.cardPlayBtn, styles.playlistPlayBtn]}>
+                              <Ionicons name="play" size={13} color="#ffffff" style={{ marginLeft: 2 }} />
+                            </View>
+                          </View>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
                   </View>
                 </View>
 
@@ -497,12 +585,33 @@ const styles = StyleSheet.create({
   input: { flex: 1, color: MOON.text, fontSize: 15, marginLeft: 10 },
 
   block: { marginTop: 24 },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 14,
+  },
   sectionTitle: {
     color: MOON.text,
     fontSize: 18,
     fontWeight: 'bold',
-    paddingHorizontal: 20,
-    marginBottom: 14,
+  },
+  featuredKickerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(139,92,246,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.3)',
+  },
+  featuredKickerText: {
+    color: MOON.primarySoft,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
 
   resultsHeader: {
@@ -524,20 +633,149 @@ const styles = StyleSheet.create({
   },
   playAllText: { color: '#1b1040', fontWeight: 'bold', fontSize: 12, marginLeft: 6 },
 
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20 },
-  chip: {
+  mashupCardsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  mashupCardTouch: {
+    flex: 1,
+  },
+  cardGlowWrapper: {
+    borderRadius: 24,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  singerCardGlow: {
+    shadowColor: '#8b5cf6',
+  },
+  playlistCardGlow: {
+    shadowColor: '#f43f5e',
+  },
+  mashupCard: {
+    borderRadius: 24,
+    padding: 16,
+    height: 148,
+    justifyContent: 'space-between',
+    position: 'relative',
+    overflow: 'hidden',
+    borderWidth: 1.5,
+  },
+  singerBorder: {
+    borderColor: 'rgba(167, 139, 250, 0.35)',
+  },
+  playlistBorder: {
+    borderColor: 'rgba(251, 113, 133, 0.35)',
+  },
+  ambientGlow: {
+    position: 'absolute',
+    top: -24,
+    right: -24,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+  },
+  radarGraphic: {
+    position: 'absolute',
+    right: -10,
+    top: -10,
+  },
+  radarRingOuter: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radarRingInner: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: MOON.card,
-    borderWidth: 1,
-    borderColor: MOON.cardBorder,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginRight: 8,
-    marginBottom: 8,
+    justifyContent: 'space-between',
   },
-  chipText: { color: MOON.text, fontSize: 13, marginLeft: 6 },
+  mashupBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  singerBadge: {
+    backgroundColor: 'rgba(139, 92, 246, 0.24)',
+    borderColor: 'rgba(167, 139, 250, 0.4)',
+  },
+  playlistBadge: {
+    backgroundColor: 'rgba(244, 63, 94, 0.24)',
+    borderColor: 'rgba(251, 113, 133, 0.4)',
+  },
+  mashupBadgeText: {
+    color: '#fff',
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+  },
+  equalizerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 3,
+    paddingRight: 4,
+  },
+  equalizerBar: {
+    width: 3,
+    borderRadius: 2,
+  },
+  cardBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  mashupCardTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    letterSpacing: 0.1,
+  },
+  singerSub: {
+    color: '#c4b5fd',
+    fontSize: 11,
+    marginTop: 3,
+    fontWeight: '500',
+  },
+  playlistSub: {
+    color: '#fda4af',
+    fontSize: 11,
+    marginTop: 3,
+    fontWeight: '500',
+  },
+  cardPlayBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  singerPlayBtn: {
+    backgroundColor: '#8b5cf6',
+    shadowColor: '#8b5cf6',
+  },
+  playlistPlayBtn: {
+    backgroundColor: '#f43f5e',
+    shadowColor: '#f43f5e',
+  },
 
   columns: { flexDirection: 'row', paddingHorizontal: 20 },
   col: { flex: 1 },

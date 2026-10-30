@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Cover, { gradientFor } from '../components/Cover';
 import ShareStoryModal from '../components/ShareStoryModal';
 import { GRADIENTS, MOON } from '../constants/moonlight';
-import { hapticLight } from '../lib/haptics';
+import { hapticLight, hapticMedium } from '../lib/haptics';
 import { player, playerStore, toggleLikeSong, useIsSongLiked, usePlayback, usePlaying } from '../lib/playerStore';
 
 const BARS = Array.from({ length: 44 }, (_, i) =>
@@ -190,6 +190,74 @@ export default function PlayerScreen() {
   const [scale] = useState(() => new Animated.Value(1));
   const [shareModalVisible, setShareModalVisible] = useState(false);
 
+  // 10s Rewind and Fast-Forward animation & handlers
+  const [leftSeekAnim] = useState(() => new Animated.Value(0));
+  const [rightSeekAnim] = useState(() => new Animated.Value(0));
+  const [leftSeekText, setLeftSeekText] = useState('-10s');
+  const [rightSeekText, setRightSeekText] = useState('+10s');
+  const leftTapCount = useRef(0);
+  const rightTapCount = useRef(0);
+  const leftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSeekBackward = useCallback(() => {
+    playerStore.seekBy(-10);
+    hapticMedium();
+
+    if (leftTimer.current) clearTimeout(leftTimer.current);
+    leftTapCount.current += 10;
+    setLeftSeekText(`-${leftTapCount.current}s`);
+
+    leftSeekAnim.setValue(0);
+    Animated.sequence([
+      Animated.spring(leftSeekAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        bounciness: 12,
+        speed: 24,
+      }),
+      Animated.timing(leftSeekAnim, {
+        toValue: 0,
+        duration: 350,
+        delay: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    leftTimer.current = setTimeout(() => {
+      leftTapCount.current = 0;
+    }, 900);
+  }, [leftSeekAnim]);
+
+  const handleSeekForward = useCallback(() => {
+    playerStore.seekBy(10);
+    hapticMedium();
+
+    if (rightTimer.current) clearTimeout(rightTimer.current);
+    rightTapCount.current += 10;
+    setRightSeekText(`+${rightTapCount.current}s`);
+
+    rightSeekAnim.setValue(0);
+    Animated.sequence([
+      Animated.spring(rightSeekAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        bounciness: 12,
+        speed: 24,
+      }),
+      Animated.timing(rightSeekAnim, {
+        toValue: 0,
+        duration: 350,
+        delay: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    rightTimer.current = setTimeout(() => {
+      rightTapCount.current = 0;
+    }, 900);
+  }, [rightSeekAnim]);
+
   useEffect(() => {
     Animated.spring(scale, {
       toValue: playing ? 1 : 0.9,
@@ -289,10 +357,93 @@ export default function PlayerScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Artwork */}
+        {/* Artwork with Left & Right 10-sec Seek Tap Zones */}
         <View style={styles.artArea}>
           <Animated.View style={[styles.artShadow, { transform: [{ scale }] }]}>
-            <Cover song={current} size={ART} radius={28} />
+            <View style={{ width: ART, height: ART, borderRadius: 28, overflow: 'hidden' }}>
+              <Cover song={current} size={ART} radius={28} />
+
+              {/* Tap Left & Right for 10s Rewind / Fast-Forward */}
+              <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+                <View style={styles.seekTapRow}>
+                  {/* Left Half: -10s */}
+                  <TouchableOpacity
+                    style={styles.seekSideLeft}
+                    activeOpacity={0.75}
+                    onPress={handleSeekBackward}
+                    accessibilityRole="button"
+                    accessibilityLabel="Rewind 10 seconds"
+                  >
+                    <View style={styles.seekHintPill}>
+                      <Ionicons name="play-back" size={12} color="rgba(255,255,255,0.85)" />
+                      <Text style={styles.seekHintText}>10s</Text>
+                    </View>
+
+                    {/* Animated Ripple / Pulse Badge */}
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[
+                        styles.seekFeedbackOverlay,
+                        {
+                          opacity: leftSeekAnim,
+                          transform: [
+                            {
+                              scale: leftSeekAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.65, 1.1],
+                              }),
+                            },
+                          ],
+                        },
+                      ]}
+                    >
+                      <View style={styles.seekFeedbackCircle}>
+                        <Ionicons name="play-back" size={26} color="#ffffff" />
+                        <Text style={styles.seekFeedbackText}>{leftSeekText}</Text>
+                      </View>
+                    </Animated.View>
+                  </TouchableOpacity>
+
+                  {/* Right Half: +10s */}
+                  <TouchableOpacity
+                    style={styles.seekSideRight}
+                    activeOpacity={0.75}
+                    onPress={handleSeekForward}
+                    accessibilityRole="button"
+                    accessibilityLabel="Forward 10 seconds"
+                  >
+                    <View style={styles.seekHintPill}>
+                      <Text style={styles.seekHintText}>10s</Text>
+                      <Ionicons name="play-forward" size={12} color="rgba(255,255,255,0.85)" />
+                    </View>
+
+                    {/* Animated Ripple / Pulse Badge */}
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[
+                        styles.seekFeedbackOverlay,
+                        {
+                          opacity: rightSeekAnim,
+                          transform: [
+                            {
+                              scale: rightSeekAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.65, 1.1],
+                              }),
+                            },
+                          ],
+                        },
+                      ]}
+                    >
+                      <View style={styles.seekFeedbackCircle}>
+                        <Ionicons name="play-forward" size={26} color="#ffffff" />
+                        <Text style={styles.seekFeedbackText}>{rightSeekText}</Text>
+                      </View>
+                    </Animated.View>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
           </Animated.View>
           {player && <LoadingLogo audioPlayer={player} />}
         </View>
@@ -424,6 +575,67 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.55,
     shadowRadius: 24,
+  },
+
+  seekTapRow: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  seekSideLeft: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 12,
+  },
+  seekSideRight: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingRight: 12,
+  },
+  seekHintPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(10, 6, 22, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+  seekHintText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  seekFeedbackOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  seekFeedbackCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(26, 16, 56, 0.9)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(192, 132, 252, 0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#a855f7',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 14,
+    elevation: 10,
+  },
+  seekFeedbackText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 2,
+    letterSpacing: 0.5,
   },
 
   titleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
