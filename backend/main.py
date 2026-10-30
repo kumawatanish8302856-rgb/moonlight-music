@@ -190,45 +190,50 @@ def get_stream_url(video_id: str):
 @app.get("/api/debug/{video_id}")
 async def debug_stream(video_id: str):
     import urllib.request
-    try:
-        # Check current public IP
-        ip_res = httpx.get("https://api.ipify.org?format=json", timeout=5).json()
-        current_ip = ip_res.get("ip")
-    except Exception as e:
-        current_ip = f"Error: {e}"
+    results = {}
 
-    stream_info = get_stream_url(video_id)
-    audio_url = stream_info["audioUrl"]
-    headers = dict(stream_info.get("headers", {}))
+    # Test 1: Invidious
+    for inst in ["https://yt.chocolatemoo53.com", "https://inv.nadeko.net", "https://invidious.nerdvpn.de"]:
+        try:
+            url = f"{inst}/latest_version?id={video_id}&itag=140&local=true"
+            async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
+                r = await client.get(url, headers={"Range": "bytes=0-100"})
+                results[f"invidious_{inst}"] = f"HTTP {r.status_code}, len={len(r.content)}"
+        except Exception as e:
+            results[f"invidious_{inst}"] = f"Err: {e}"
 
-    # Test urllib
-    urllib_result = ""
-    try:
-        req = urllib.request.Request(audio_url, headers={"User-Agent": headers.get("User-Agent", "")})
-        with urllib.request.urlopen(req, timeout=5) as r:
-            sample = r.read(64)
-            urllib_result = f"OK: {len(sample)} bytes, HTTP {r.status}"
-    except Exception as e:
-        urllib_result = f"Err: {e}"
+    # Test 2: yt-dlp different clients
+    clients_to_test = [
+        ("default", None),
+        ("tv_embedded", ["tv_embedded"]),
+        ("visionos", ["visionos"]),
+        ("mweb", ["mweb"]),
+        ("ios", ["ios"]),
+    ]
 
-    # Test httpx
-    httpx_result = ""
-    try:
-        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
-            resp = await client.get(audio_url, headers=headers)
-            httpx_result = f"HTTP {resp.status_code}, length={len(resp.content)}"
-    except Exception as e:
-        httpx_result = f"Err: {e}"
+    for name, p_client in clients_to_test:
+        opts: Dict[str, Any] = {
+            "format": "140/ba/b",
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": True,
+            "remote_components": ["ejs:github"],
+        }
+        if p_client:
+            opts["extractor_args"] = {"youtube": {"player_client": p_client}}
+        if HAS_IMPERSONATE:
+            try:
+                opts["impersonate"] = ImpersonateTarget.from_str("chrome")
+            except Exception:
+                pass
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+                results[f"ytdlp_{name}"] = f"OK: {info.get('format_id')}, url_len={len(info.get('url', ''))}"
+        except Exception as e:
+            results[f"ytdlp_{name}"] = f"Err: {str(e)[:100]}"
 
-    return {
-        "current_egress_ip": current_ip,
-        "video_id": video_id,
-        "format": stream_info.get("format"),
-        "headers": headers,
-        "audio_url_snippet": audio_url[:120],
-        "urllib_result": urllib_result,
-        "httpx_result": httpx_result,
-    }
+    return results
 
 @app.api_route("/api/proxy/{video_id}", methods=["GET", "HEAD"])
 async def proxy_audio_stream(video_id: str, request: Request):
