@@ -17,7 +17,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from '../components/BottomNav';
-import { searchSongs, songsByTag, songsErrorMessage } from '../lib/songs';
+import {
+  searchSongs,
+  songsByTag,
+  songsErrorMessage,
+  searchYouTubeMusic,
+  fetchYouTubeTrending,
+} from '../lib/songs';
 import { playerStore, Song, useLibrary } from '../lib/playerStore';
 
 // ---------- Moonlight theme ----------
@@ -105,34 +111,51 @@ const SongRow = memo(function SongRow({
   index: number;
   onPlay: (i: number) => void;
 }) {
+  const thumbUri = song.thumb || song.coverUrl;
   const [failedThumbUri, setFailedThumbUri] = useState<string | null>(null);
-  const showThumb = !!song.thumb && failedThumbUri !== song.thumb;
+  const showThumb = !!thumbUri && failedThumbUri !== thumbUri;
 
   return (
     <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => onPlay(index)}>
       {showThumb ? (
         <Image
-          source={{ uri: song.thumb }}
+          source={{ uri: thumbUri }}
           style={styles.thumb}
           contentFit="cover"
           transition={150}
           cachePolicy="memory-disk"
-          onError={() => setFailedThumbUri(song.thumb ?? null)}
+          onError={() => setFailedThumbUri(thumbUri ?? null)}
         />
       ) : (
         <View style={[styles.thumb, styles.thumbPlaceholder]}>
-          <Ionicons name="musical-notes" size={24} color={MOON.primarySoft} />
+          <Ionicons
+            name={song.source === 'youtube' ? 'logo-youtube' : 'musical-notes'}
+            size={24}
+            color={song.source === 'youtube' ? '#ef4444' : MOON.primarySoft}
+          />
         </View>
       )}
       <View style={{ flex: 1, marginLeft: 14 }}>
         <Text style={styles.songTitle} numberOfLines={2}>
           {song.title}
         </Text>
-        <Text style={styles.songArtist} numberOfLines={1}>
-          {song.artist}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3, gap: 6 }}>
+          {song.source === 'youtube' && (
+            <View style={styles.ytBadge}>
+              <Ionicons name="logo-youtube" size={10} color="#ff0033" />
+              <Text style={styles.ytBadgeText}>YT Music</Text>
+            </View>
+          )}
+          <Text style={[styles.songArtist, { flex: 1 }]} numberOfLines={1}>
+            {song.artist}
+          </Text>
+        </View>
       </View>
-      <Ionicons name="play-circle" size={30} color={MOON.primarySoft} />
+      <Ionicons
+        name="play-circle"
+        size={30}
+        color={song.source === 'youtube' ? '#f43f5e' : MOON.primarySoft}
+      />
     </TouchableOpacity>
   );
 });
@@ -148,13 +171,31 @@ export default function SearchScreen() {
 
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<'search' | 'tag'>('search');
+  const [searchSource, setSearchSource] = useState<'library' | 'youtube'>('youtube');
   const [focused, setFocused] = useState(false);
   const [results, setResults] = useState<Song[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [trendingSongs, setTrendingSongs] = useState<Song[]>([]);
 
   const reqId = useRef(0);
   const [retryKey, setRetryKey] = useState(0);
+
+  // Fetch YouTube trending songs when screen opens
+  useEffect(() => {
+    let active = true;
+    fetchYouTubeTrending('IN')
+      .then((songs) => {
+        if (active && songs.length > 0) {
+          setTrendingSongs(songs);
+          setResults((prev) => (prev === null ? songs : prev));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Reuse the app-wide Drive library instead of fetching it again for Search.
   useEffect(() => {
@@ -178,12 +219,18 @@ export default function SearchScreen() {
       setLoading(true);
       setError('');
       try {
-        const list = await searchSongs(
-          q,
-          libraryLoaded && !libraryError ? librarySongs : undefined
-        );
-        if (id !== reqId.current) return;
-        setResults(list);
+        if (searchSource === 'youtube') {
+          const list = await searchYouTubeMusic(q);
+          if (id !== reqId.current) return;
+          setResults(list);
+        } else {
+          const list = await searchSongs(
+            q,
+            libraryLoaded && !libraryError ? librarySongs : undefined
+          );
+          if (id !== reqId.current) return;
+          setResults(list);
+        }
       } catch (err) {
         if (id !== reqId.current) return;
         setResults(null);
@@ -191,22 +238,38 @@ export default function SearchScreen() {
       } finally {
         if (id === reqId.current) setLoading(false);
       }
-    }, 120);
+    }, searchSource === 'youtube' ? 300 : 120);
 
     return () => clearTimeout(timer);
-  }, [query, mode, retryKey, libraryLoaded, libraryError, librarySongs]);
+  }, [query, mode, searchSource, retryKey, libraryLoaded, libraryError, librarySongs]);
 
   // ---------- Handlers ----------
-  const onChangeText = useCallback((t: string) => {
-    setMode('search');
-    setQuery(t);
-    if (!t.trim()) {
-      reqId.current++;
-      setResults(null);
+  const onChangeText = useCallback(
+    (t: string) => {
+      setMode('search');
+      setQuery(t);
+      if (!t.trim()) {
+        reqId.current++;
+        setResults(searchSource === 'youtube' && trendingSongs.length > 0 ? trendingSongs : null);
+        setError('');
+        setLoading(false);
+      }
+    },
+    [searchSource, trendingSongs]
+  );
+
+  const onSelectSource = useCallback(
+    (source: 'library' | 'youtube') => {
+      setSearchSource(source);
+      setMode('search');
       setError('');
-      setLoading(false);
-    }
-  }, []);
+      const q = query.trim();
+      if (!q) {
+        setResults(source === 'youtube' && trendingSongs.length > 0 ? trendingSongs : null);
+      }
+    },
+    [query, trendingSongs]
+  );
 
   const onSubmit = useCallback(() => {
     const q = query.trim();
@@ -246,10 +309,10 @@ export default function SearchScreen() {
     reqId.current++;
     setMode('search');
     setQuery('');
-    setResults(null);
+    setResults(searchSource === 'youtube' && trendingSongs.length > 0 ? trendingSongs : null);
     setError('');
     setLoading(false);
-  }, []);
+  }, [searchSource, trendingSongs]);
 
   const playSong = useCallback(
     (index: number) => {
@@ -301,11 +364,18 @@ export default function SearchScreen() {
   const showResults = !!results && !(loading && results.length === 0);
   const showBrowse = !loading && !results && !error;
 
-  const header = useMemo(
-    () => (
+  const header = useMemo(() => {
+    const q = query.trim();
+    let title = 'Results';
+    if (mode === 'tag') {
+      title = query;
+    } else if (searchSource === 'youtube') {
+      title = q ? 'YouTube Music' : '🔥 Trending on YouTube';
+    }
+    return (
       <View style={styles.resultsHeader}>
         <Text style={styles.sectionTitleInline}>
-          {mode === 'tag' ? query : 'Results'}
+          {title}
           {results ? `  •  ${results.length}` : ''}
         </Text>
         {!!results?.length && (
@@ -315,9 +385,8 @@ export default function SearchScreen() {
           </TouchableOpacity>
         )}
       </View>
-    ),
-    [mode, query, results, onHeaderPlayPress]
-  );
+    );
+  }, [mode, query, searchSource, results, onHeaderPlayPress]);
 
   return (
     <LinearGradient
@@ -339,7 +408,11 @@ export default function SearchScreen() {
           <Ionicons name="search" size={20} color={MOON.primarySoft} />
           <TextInput
             style={styles.input}
-            placeholder="Songs, artists, moods..."
+            placeholder={
+              searchSource === 'youtube'
+                ? 'Search any song or artist on YouTube...'
+                : 'Songs, artists, moods...'
+            }
             placeholderTextColor={MOON.textDim}
             value={query}
             onChangeText={onChangeText}
@@ -355,6 +428,49 @@ export default function SearchScreen() {
               <Ionicons name="close-circle" size={20} color={MOON.textDim} />
             </TouchableOpacity>
           )}
+        </View>
+
+        {/* Source Toggle Tabs */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[styles.tabButton, searchSource === 'youtube' && styles.tabButtonActiveYoutube]}
+            onPress={() => onSelectSource('youtube')}
+          >
+            <Ionicons
+              name="logo-youtube"
+              size={15}
+              color={searchSource === 'youtube' ? '#ffffff' : '#ef4444'}
+            />
+            <Text
+              style={[
+                styles.tabButtonText,
+                searchSource === 'youtube' && styles.tabButtonTextActive,
+              ]}
+            >
+              YouTube Music ⚡
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[styles.tabButton, searchSource === 'library' && styles.tabButtonActive]}
+            onPress={() => onSelectSource('library')}
+          >
+            <Ionicons
+              name="folder-open"
+              size={15}
+              color={searchSource === 'library' ? '#ffffff' : MOON.textDim}
+            />
+            <Text
+              style={[
+                styles.tabButtonText,
+                searchSource === 'library' && styles.tabButtonTextActive,
+              ]}
+            >
+              Moonlight Drive
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Body */}
@@ -822,4 +938,57 @@ const styles = StyleSheet.create({
     borderColor: MOON.cardBorder,
   },
   retryText: { color: MOON.primarySoft, fontWeight: '600', fontSize: 13 },
+
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 8,
+    gap: 10,
+  },
+  tabButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    gap: 6,
+  },
+  tabButtonActive: {
+    backgroundColor: 'rgba(124, 58, 237, 0.25)',
+    borderColor: '#8b5cf6',
+  },
+  tabButtonActiveYoutube: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderColor: '#ef4444',
+  },
+  tabButtonText: {
+    color: MOON.textDim,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  tabButtonTextActive: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  ytBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+  },
+  ytBadgeText: {
+    color: '#ef4444',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
 });

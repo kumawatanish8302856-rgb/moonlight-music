@@ -9,7 +9,10 @@ export type Song = {
   audioUrl: string;
   coverUrl?: string;
   thumb?: string;
+  source?: 'drive' | 'youtube';
 };
+
+export const MOONLIGHT_API_URL = 'https://moonlight-music.onrender.com';
 
 const bundledSongs: Song[] = (Array.isArray(bundledSongsData) ? bundledSongsData : []) as Song[];
 const cloudinaryCoversMap = (cloudinaryCoversData || {}) as Record<string, string>;
@@ -472,4 +475,48 @@ export function songsErrorMessage(error?: unknown): string {
     return 'Could not connect to Google Drive. Check your internet connection and try again.';
   }
   return message;
+}
+
+export async function searchYouTubeMusic(query: string): Promise<Song[]> {
+  const q = query.trim();
+  if (!q) return [];
+  try {
+    const res = await fetch(`${MOONLIGHT_API_URL}/api/search?q=${encodeURIComponent(q)}`);
+    if (!res.ok) throw new Error(`YouTube API returned ${res.status}`);
+    const data = (await res.json()) as { songs?: { id: string; title: string; artist: string; coverUrl?: string }[] };
+    const songs: Song[] = (data.songs || []).map((s) => ({
+      id: `yt_${s.id}`,
+      title: s.title,
+      artist: s.artist,
+      audioUrl: `${MOONLIGHT_API_URL}/api/proxy/${s.id}`,
+      coverUrl: s.coverUrl,
+      thumb: s.coverUrl,
+      source: 'youtube',
+    }));
+    return songs;
+  } catch (error) {
+    console.warn('YouTube search failed:', error);
+    throw error;
+  }
+}
+
+export async function fetchYouTubeTrending(country = 'IN'): Promise<Song[]> {
+  try {
+    const res = await fetch(`${MOONLIGHT_API_URL}/api/trending?country=${country}`);
+    if (!res.ok) throw new Error(`YouTube API returned ${res.status}`);
+    const data = (await res.json()) as { songs?: { id: string; title: string; artist: string; coverUrl?: string }[] };
+    const songs: Song[] = (data.songs || []).map((s) => ({
+      id: `yt_${s.id}`,
+      title: s.title,
+      artist: s.artist,
+      audioUrl: `${MOONLIGHT_API_URL}/api/proxy/${s.id}`,
+      coverUrl: s.coverUrl,
+      thumb: s.coverUrl,
+      source: 'youtube',
+    }));
+    return songs;
+  } catch (error) {
+    console.warn('YouTube trending fetch failed:', error);
+    return [];
+  }
 }
