@@ -43,3 +43,12 @@ example
 # generated native folders
 /ios
 /android
+
+# Python / Backend
+venv/
+.venv/
+__pycache__/
+*.pyc
+backend/venv/
+backend/.venv/
+backend/__pycache__/
