@@ -20,6 +20,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from '../components/BottomNav';
 import Cover from '../components/Cover';
 import {
+  fetchHeroConfig,
+  getCachedHeroConfig,
+  type HeroBannerConfig,
+} from '../lib/heroBanner';
+import {
   fetchActiveNotification,
   getLastSeenNotificationId,
   getPersonalizedNotification,
@@ -543,6 +548,36 @@ export default function HomeScreen() {
     songId?: string;
   } | null>(null);
   const [hasUnreadNotif, setHasUnreadNotif] = useState(false);
+  const [heroConfig, setHeroConfig] = useState<HeroBannerConfig | null>(null);
+
+  // Load Hero Banner Config (Cached + Remote)
+  useEffect(() => {
+    void (async () => {
+      const cached = await getCachedHeroConfig();
+      if (cached) setHeroConfig(cached);
+      const remote = await fetchHeroConfig();
+      if (remote) setHeroConfig(remote);
+    })();
+  }, []);
+
+  const heroSongs = useMemo(() => {
+    if (heroConfig?.mode === 'custom' && heroConfig.songIds?.length) {
+      const customPicked = heroConfig.songIds
+        .map((id) => songs.find((s) => s.id === id))
+        .filter((s): s is Song => Boolean(s));
+      if (customPicked.length > 0) return customPicked;
+    }
+    // Auto fallback: 3 newest songs from Drive
+    return songs.slice(0, 3);
+  }, [heroConfig, songs]);
+
+  const heroKicker = heroConfig?.kicker || '🔥 TRENDING TONIGHT';
+  const heroTitle = heroConfig?.title || 'Midnight Mashups Mix';
+  const heroSub =
+    heroConfig?.subtitle ||
+    (heroSongs.length
+      ? heroSongs.map((s) => s.title.split(' x ')[0].trim()).join(' • ')
+      : 'Top romantic & soulful mashups');
 
   // Request permissions on launch + check active broadcast notification
   useEffect(() => {
@@ -686,48 +721,97 @@ export default function HomeScreen() {
             })}
           </ScrollView>
 
-          {/* Hero card */}
+          {/* Apple Music Style 3D Overlapping Glass Hero Card */}
           <TouchableOpacity
-            activeOpacity={0.9}
+            activeOpacity={0.92}
             disabled={songs.length === 0 && !current}
             onPress={() => {
               if (current) {
                 router.push('/player');
+              } else if (heroSongs.length) {
+                playFrom(heroSongs, 0);
               } else {
                 playFrom(shuffledRemaining, 0);
               }
             }}
             style={styles.heroWrap}
           >
-            <View style={styles.hero}>
-              <Image
-                source={require('@/assets/images/moonlight-banner.png')}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-              />
+            <View style={styles.heroGlassCard}>
+              {/* Ambient radial glow background */}
               <LinearGradient
-                colors={['rgba(8,6,15,0.12)', 'rgba(8,6,15,0.78)']}
+                colors={['rgba(139,92,246,0.38)', 'rgba(192,38,211,0.18)', 'transparent']}
+                start={{ x: 0.85, y: 0.1 }}
+                end={{ x: 0.1, y: 1 }}
                 style={StyleSheet.absoluteFill}
               />
-              <Text style={styles.heroSmall}>
-                {current ? 'NOW PLAYING' : 'YOUR SONGS'}
-              </Text>
-              <Text style={styles.heroTitle} numberOfLines={1}>
-                {current?.title ?? (songs.length ? mood.title : 'Your songs')}
-              </Text>
-              <Text style={styles.heroSub} numberOfLines={1}>
-                {current?.artist ??
-                  (loading ? 'Loading your Drive songs...' : error || `${songs.length} songs ready to play`)}
-              </Text>
-              <View style={styles.heroBtn}>
-                {loading && !current ? (
-                  <ActivityIndicator size="small" color="#1b1040" />
-                ) : (
-                  <Ionicons name={current && playing ? 'pause' : 'play'} size={16} color="#1b1040" />
-                )}
-                <Text style={styles.heroBtnText}>
-                  {current ? 'Open player' : songs.length ? 'Play now' : 'No songs yet'}
+
+              {/* Left Column (60%): Kicker, Main Title, Subtitle, Play Pill */}
+              <View style={styles.heroContentLeft}>
+                <View style={styles.heroBadgePill}>
+                  <View style={styles.heroBadgeDot} />
+                  <Text style={styles.heroBadgeText} numberOfLines={1}>
+                    {heroKicker}
+                  </Text>
+                </View>
+
+                <Text style={styles.heroMainTitle} numberOfLines={2}>
+                  {current ? current.title : (heroTitle || mood.title)}
                 </Text>
+
+                <Text style={styles.heroMainSub} numberOfLines={1}>
+                  {current ? current.artist : heroSub}
+                </Text>
+
+                <View style={styles.heroPlayActionBtn}>
+                  {loading && !current ? (
+                    <ActivityIndicator size="small" color="#08060f" />
+                  ) : (
+                    <Ionicons
+                      name={current && playing ? 'pause' : 'play'}
+                      size={13}
+                      color="#08060f"
+                      style={{ marginLeft: 2 }}
+                    />
+                  )}
+                  <Text style={styles.heroPlayActionText}>
+                    {current ? (playing ? 'Pause' : 'Resume') : 'Play Mix'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Right Column (40%): 3D Overlapping Glass Album Cards */}
+              <View style={styles.heroDeck3d}>
+                {/* Card 3 (Back Right, rotated +14°) */}
+                {heroSongs[2] && (
+                  <View style={[styles.deckCardWrapper, styles.deckCardBack]}>
+                    <Cover song={heroSongs[2]} size={76} radius={14} />
+                    <View style={styles.deckCardBackDim} />
+                  </View>
+                )}
+
+                {/* Card 2 (Middle Left, rotated -10°) */}
+                {heroSongs[1] && (
+                  <View style={[styles.deckCardWrapper, styles.deckCardMid]}>
+                    <Cover song={heroSongs[1]} size={82} radius={16} />
+                    <View style={styles.deckCardMidDim} />
+                  </View>
+                )}
+
+                {/* Card 1 (Front Hero, upright +2°, elevated glow) */}
+                {heroSongs[0] && (
+                  <View style={[styles.deckCardWrapper, styles.deckCardFront]}>
+                    <Cover song={heroSongs[0]} size={90} radius={18} />
+                    <View style={styles.deckCardFrontBorder} />
+                    {/* Live Equalizer indicator if playing */}
+                    {playing && (
+                      <View style={styles.deckPlayingEqualizer}>
+                        <View style={[styles.deckEqBar, { height: 7 }]} />
+                        <View style={[styles.deckEqBar, { height: 13 }]} />
+                        <View style={[styles.deckEqBar, { height: 9 }]} />
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
             </View>
           </TouchableOpacity>
@@ -1050,28 +1134,180 @@ const styles = StyleSheet.create({
   },
   moodText: { color: MOON.textDim, fontSize: 14, fontWeight: '600', marginLeft: 8 },
 
-  heroWrap: { paddingHorizontal: 20, marginTop: 4 },
-  hero: {
+  heroWrap: { paddingHorizontal: 16, marginTop: 4 },
+  heroGlassCard: {
     borderRadius: 28,
-    padding: 22,
-    height: 200,
+    padding: 20,
+    minHeight: 195,
+    backgroundColor: '#160c2e',
+    borderWidth: 1.5,
+    borderColor: 'rgba(167,139,250,0.32)',
     overflow: 'hidden',
-    justifyContent: 'flex-end',
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 8,
   },
-  heroSmall: { color: 'rgba(255,255,255,0.8)', fontSize: 11, letterSpacing: 2 },
-  heroTitle: { color: '#fff', fontSize: 26, fontWeight: 'bold', marginTop: 6 },
-  heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4 },
-  heroBtn: {
+  heroContentLeft: {
+    flex: 1,
+    paddingRight: 10,
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  heroBadgePill: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    marginTop: 16,
+    backgroundColor: 'rgba(139,92,246,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.45)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginBottom: 8,
   },
-  heroBtnText: { color: '#1b1040', fontWeight: 'bold', fontSize: 13, marginLeft: 6 },
+  heroBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#fef3c7',
+    marginRight: 6,
+  },
+  heroBadgeText: {
+    color: '#fef3c7',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+  },
+  heroMainTitle: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    lineHeight: 25,
+    marginBottom: 4,
+  },
+  heroMainSub: {
+    color: MOON.primarySoft,
+    fontSize: 12.5,
+    fontWeight: '500',
+    marginBottom: 14,
+  },
+  heroPlayActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  heroPlayActionText: {
+    color: '#08060f',
+    fontSize: 12.5,
+    fontWeight: '800',
+    marginLeft: 6,
+  },
+  // 3D Deck Container
+  heroDeck3d: {
+    width: 124,
+    height: 124,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  deckCardWrapper: {
+    position: 'absolute',
+    borderRadius: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  deckCardBack: {
+    top: 6,
+    right: -4,
+    transform: [{ rotate: '14deg' }, { scale: 0.82 }],
+    zIndex: 1,
+    borderColor: 'rgba(167,139,250,0.3)',
+  },
+  deckCardBackDim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(8,6,15,0.35)',
+    borderRadius: 14,
+  },
+  deckCardMid: {
+    top: 14,
+    left: 4,
+    transform: [{ rotate: '-10deg' }, { scale: 0.9 }],
+    zIndex: 2,
+    borderColor: 'rgba(254,243,199,0.35)',
+  },
+  deckCardMidDim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(8,6,15,0.18)',
+    borderRadius: 16,
+  },
+  deckCardFront: {
+    top: 18,
+    left: 18,
+    transform: [{ rotate: '2deg' }],
+    zIndex: 3,
+    borderColor: 'rgba(255,255,255,0.65)',
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.65,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  deckCardFrontBorder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  deckPlayingEqualizer: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 2.5,
+    backgroundColor: 'rgba(8,6,15,0.7)',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  deckEqBar: {
+    width: 2.5,
+    backgroundColor: '#4ade80',
+    borderRadius: 1,
+  },
 
   // ----- Sections -----
   section: { marginTop: 28 },

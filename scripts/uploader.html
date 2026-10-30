@@ -241,6 +241,42 @@
     justify-content: space-between;
   }
 
+  /* Mashup Classification Cards */
+  .mtype-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 650px) {
+    .mtype-grid { grid-template-columns: 1fr; }
+  }
+  .mtype-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--night-soft);
+    border: 1.5px solid var(--line);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.18s ease;
+  }
+  .mtype-card:hover {
+    border-color: var(--violet-soft);
+  }
+  .mtype-card.active {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.35), rgba(192, 38, 211, 0.35));
+    border-color: var(--violet-soft);
+    box-shadow: 0 0 16px rgba(139, 92, 246, 0.4);
+  }
+  .mtype-card input { display: none; }
+  .mtype-icon { font-size: 1.3rem; }
+  .mtype-info { display: flex; flex-direction: column; }
+  .mtype-title { font-size: 0.86rem; font-weight: 700; color: #fff; }
+  .mtype-sub { font-size: 0.72rem; color: var(--muted); }
+
   .tags-grid {
     display: flex;
     flex-wrap: wrap;
@@ -532,6 +568,230 @@
     padding: 8px 14px; border-radius: 8px; background: var(--violet); border: 0;
     color: #fff; font-weight: 700; font-size: 0.82rem; cursor: pointer;
   }
+
+  /* Cloudinary Bar */
+  .cloudinary-bar {
+    background: rgba(18, 13, 34, 0.9);
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(14px);
+    transition: all 0.2s ease;
+  }
+  .cbar-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+  .cbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .cbar-icon { font-size: 1.4rem; }
+  .cbar-badge {
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(168, 159, 199, 0.25);
+    background: rgba(168, 159, 199, 0.12);
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .cbar-toggle-btn {
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid var(--panel-border);
+    color: var(--violet-soft);
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .cbar-toggle-btn:hover {
+    background: var(--violet);
+    color: #fff;
+  }
+  .cbar-body {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    display: none;
+  }
+  .cbar-body.open { display: block; animation: fadeIn 0.2s ease; }
+  .cbar-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 600px) {
+    .cbar-grid { grid-template-columns: 1fr; }
+  }
+  .cbar-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.76rem;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .cbar-field input {
+    background: #0d0918;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: #fff;
+    font-size: 0.86rem;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  .cbar-field input:focus {
+    border-color: var(--violet);
+  }
+  .cbar-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 0.76rem;
+    color: var(--muted);
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .cbar-test-btn {
+    background: transparent;
+    border: 1px solid var(--violet);
+    color: var(--violet-soft);
+    padding: 5px 11px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .cbar-test-btn:hover {
+    background: var(--violet);
+    color: #fff;
+  }
+
+  /* 3D Overlapping Glass Hero Mockup */
+  .hero-mockup-card {
+    background: linear-gradient(135deg, #1c103a 0%, #0d071e 100%);
+    border: 1.5px solid rgba(167, 139, 250, 0.35);
+    border-radius: 26px;
+    padding: 22px;
+    margin-top: 18px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  .hero-mockup-glow {
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.35) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-mockup-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: relative;
+    z-index: 2;
+  }
+  @media (max-width: 580px) {
+    .hero-mockup-body { flex-direction: column-reverse; align-items: stretch; }
+  }
+  .hero-mockup-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .hero-mockup-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(139, 92, 246, 0.2);
+    border: 1px solid rgba(167, 139, 250, 0.4);
+    color: var(--moon);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+  }
+  .hero-mockup-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.25;
+    margin-bottom: 4px;
+  }
+  .hero-mockup-sub {
+    font-size: 0.84rem;
+    color: var(--violet-soft);
+    line-height: 1.4;
+    margin-bottom: 14px;
+  }
+  .hero-mockup-playbtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1b1040;
+    font-size: 0.82rem;
+    font-weight: 800;
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
+  }
+  /* 3D Cards Deck */
+  .hero-deck-3d {
+    position: relative;
+    width: 140px;
+    height: 120px;
+    flex: none;
+  }
+  .deck-card {
+    position: absolute;
+    width: 82px;
+    height: 82px;
+    border-radius: 16px;
+    background: #251b42 center/cover no-repeat;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .deck-card-back {
+    top: 6px;
+    right: 4px;
+    transform: rotate(14deg) scale(0.82);
+    opacity: 0.75;
+    z-index: 1;
+    border-color: rgba(167, 139, 250, 0.3);
+  }
+  .deck-card-mid {
+    top: 14px;
+    left: 8px;
+    transform: rotate(-10deg) scale(0.9);
+    opacity: 0.9;
+    z-index: 2;
+    border-color: rgba(254, 243, 199, 0.4);
+  }
+  .deck-card-front {
+    top: 20px;
+    left: 28px;
+    transform: rotate(2deg) scale(1.0);
+    z-index: 3;
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 12px 30px rgba(139, 92, 246, 0.6), 0 0 12px rgba(255, 255, 255, 0.2);
+  }
 </style>
 </head>
 <body>
@@ -546,6 +806,40 @@
     <p class="sub">Manage songs, edit categories & covers, and broadcast push notifications</p>
   </header>
 
+  <!-- Cloudinary CDN Settings Box -->
+  <div class="cloudinary-bar" id="cloudinaryBar">
+    <div class="cbar-head" id="toggleCloudinarySettings">
+      <div class="cbar-left">
+        <span class="cbar-icon">☁️</span>
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <strong style="font-size:0.92rem; color:var(--text);">Cloudinary Thumbnail CDN</strong>
+            <span class="cbar-badge" id="cloudinaryStatusBadge">Checking...</span>
+          </div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">Ultra-fast WebP cover loading for Moonlight App (MP3 stays on Drive)</div>
+        </div>
+      </div>
+      <button type="button" class="cbar-toggle-btn" id="btnToggleCloudinaryBody">⚙️ Settings</button>
+    </div>
+    <div class="cbar-body" id="cloudinarySettingsBody">
+      <div class="cbar-grid">
+        <label class="cbar-field">
+          <span>Cloud Name</span>
+          <input type="text" id="cfgCloudName" placeholder="e.g. dxy8abcde" autocomplete="off" spellcheck="false">
+        </label>
+        <label class="cbar-field">
+          <span>Upload Preset (Unsigned)</span>
+          <input type="text" id="cfgUploadPreset" placeholder="e.g. moonlight_covers" autocomplete="off" spellcheck="false">
+        </label>
+      </div>
+      <div class="cbar-footer">
+        <span>💡 <i>Preset unsigned hona chahiye (Cloudinary Settings &gt; Upload &gt; Add upload preset &gt; Unsigned). Auto-saves in browser!</i></span>
+        <button type="button" class="cbar-test-btn" id="btnTestCloudinary">⚡ Test CDN</button>
+      </div>
+      <div id="cloudinaryTestMsg" style="display:none; margin-top:8px; font-size:0.78rem; font-weight:600;"></div>
+    </div>
+  </div>
+
   <!-- Navigation Tabs -->
   <nav class="nav-tabs">
     <button class="tab-btn active" id="tabUploadBtn">
@@ -556,6 +850,10 @@
       <span>📁</span>
       <span>All Songs Manager</span>
       <span class="badge-pill" id="allSongsCount">40</span>
+    </button>
+    <button class="tab-btn" id="tabHeroBtn">
+      <span>✨</span>
+      <span>Hero Studio</span>
     </button>
     <button class="tab-btn" id="tabNotifBtn">
       <span>🔔</span>
@@ -608,6 +906,38 @@
         <div class="tag-chip" data-tag="focus"><span class="emoji">🧘</span><span>Deep Focus</span></div>
         <div class="tag-chip" data-tag="workout"><span class="emoji">⚡</span><span>Workout / Beat</span></div>
         <div class="tag-chip" data-tag="pop"><span class="emoji">✨</span><span>Pop</span></div>
+      </div>
+
+      <!-- Mashup Hub Category (Discover Cards) -->
+      <div class="tags-title">
+        <span>Discover Screen Mashup Card</span>
+        <span class="field-hint">Choose which Discover card this song appears under</span>
+      </div>
+      <div class="mtype-grid" id="uploadMTypeGrid">
+        <label class="mtype-card" data-val="singermashup">
+          <input type="radio" name="uploadMType" value="singermashup">
+          <span class="mtype-icon">🎤</span>
+          <div class="mtype-info">
+            <span class="mtype-title">Singer / Artist Mashup</span>
+            <span class="mtype-sub">Appears in Singer Mashups card</span>
+          </div>
+        </label>
+        <label class="mtype-card" data-val="playlistmashup">
+          <input type="radio" name="uploadMType" value="playlistmashup">
+          <span class="mtype-icon">📜</span>
+          <div class="mtype-info">
+            <span class="mtype-title">Playlists Mashup</span>
+            <span class="mtype-sub">Appears in Playlists Mashups card</span>
+          </div>
+        </label>
+        <label class="mtype-card active" data-val="none">
+          <input type="radio" name="uploadMType" value="none" checked>
+          <span class="mtype-icon">🎵</span>
+          <div class="mtype-info">
+            <span class="mtype-title">None / Regular</span>
+            <span class="mtype-sub">Standard song</span>
+          </div>
+        </label>
       </div>
 
       <!-- File selection row -->
@@ -890,6 +1220,11 @@ function doPost(e) {
         audioFile.setName(data.newTitle + ".mp3");
       }
 
+      // If Cloudinary cover URL provided, set file description
+      if (data.newCoverUrl) {
+        audioFile.setDescription(data.newCoverUrl);
+      }
+
       // If new thumbnail is uploaded
       let newCoverId = null;
       if (data.newThumb) {
@@ -959,6 +1294,11 @@ function doPost(e) {
       const audioFile = folder.createFile(audioBlob);
       audioFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
+      // Save Cloudinary cover URL in Drive file description (instant CDN for app)
+      if (data.coverUrl) {
+        audioFile.setDescription(data.coverUrl);
+      }
+
       let thumbFile = null;
       if (data.thumb) {
         const ext = data.thumbExt || "jpg";
@@ -995,6 +1335,147 @@ function doPost(e) {
   }
 }</code></pre>
       </div>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       TAB 4: Hero Banner Studio
+       ==================================================== -->
+  <div class="tab-panel" id="panelHero">
+    <div class="card">
+      <div class="card-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>Hero Banner Studio (Apple Music 3D Cards)</span>
+      </div>
+
+      <label class="field">
+        <span class="field-label">
+          <span>Top Badge / Kicker Text</span>
+          <span class="field-hint">Glowing pill tag above headline</span>
+        </span>
+        <input type="text" id="heroKicker" value="🔥 TRENDING TONIGHT" placeholder="e.g. 🔥 TRENDING TONIGHT">
+        <div class="template-pills">
+          <span class="tmpl-pill" onclick="setHeroKicker('🔥 TRENDING TONIGHT')">🔥 TRENDING TONIGHT</span>
+          <span class="tmpl-pill" onclick="setHeroKicker('✨ EXCLUSIVE MIX')">✨ EXCLUSIVE MIX</span>
+          <span class="tmpl-pill" onclick="setHeroKicker('🌙 MIDNIGHT SPECIAL')">🌙 MIDNIGHT SPECIAL</span>
+          <span class="tmpl-pill" onclick="setHeroKicker('❤️ ROMANCE UNDER MOON')">❤️ ROMANCE UNDER MOON</span>
+          <span class="tmpl-pill" onclick="setHeroKicker('🎧 CURATED FOR YOU')">🎧 CURATED FOR YOU</span>
+        </div>
+      </label>
+
+      <div class="form-row">
+        <label class="field">
+          <span class="field-label">
+            <span>Headline (Main Title)</span>
+            <span class="field-hint">Big bold title</span>
+          </span>
+          <input type="text" id="heroTitle" value="Midnight Mashups Mix" placeholder="e.g. Midnight Mashups Mix">
+        </label>
+
+        <label class="field">
+          <span class="field-label">
+            <span>Subtitle / Featured Artists</span>
+            <span class="field-hint">Dot-separated artist line</span>
+          </span>
+          <input type="text" id="heroSub" value="Arijit • Darshan • Vishal Mishra" placeholder="e.g. Arijit • Darshan • Vishal Mishra">
+        </label>
+      </div>
+
+      <!-- Mode Selection: Auto vs Custom Songs -->
+      <div class="tags-title" style="margin-top:10px;">
+        <span>3D Album Covers Source</span>
+        <span class="field-hint">How covers are picked</span>
+      </div>
+      <div class="mtype-grid" id="heroModeGrid">
+        <label class="mtype-card active" id="heroModeAutoCard" data-val="auto">
+          <input type="radio" name="heroMode" value="auto" checked>
+          <span class="mtype-icon">⚡</span>
+          <div class="mtype-info">
+            <span class="mtype-title">Auto Mode (Newest Uploads)</span>
+            <span class="mtype-sub">Picks 3 latest Drive songs automatically</span>
+          </div>
+        </label>
+        <label class="mtype-card" id="heroModeCustomCard" data-val="custom">
+          <input type="radio" name="heroMode" value="custom">
+          <span class="mtype-icon">🎨</span>
+          <div class="mtype-info">
+            <span class="mtype-title">Custom 3 Songs Selection</span>
+            <span class="mtype-sub">Handpick Front, Left & Right songs</span>
+          </div>
+        </label>
+      </div>
+
+      <!-- Custom 3 Songs Selectors (hidden in auto mode) -->
+      <div id="heroCustomPickers" style="display:none; margin-bottom:18px;">
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">
+              <span>🎴 Front Hero Card (Primary)</span>
+              <span class="field-hint">Centered upfront</span>
+            </span>
+            <select id="heroSongFront">
+              <option value="">-- Choose Front Song --</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">
+              <span>🎴 Left Tilted Card (-10°)</span>
+              <span class="field-hint">Mid depth layer</span>
+            </span>
+            <select id="heroSongMid">
+              <option value="">-- Choose Left Song --</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">
+            <span>🎴 Right Tilted Card (+14°)</span>
+            <span class="field-hint">Back depth layer</span>
+          </span>
+          <select id="heroSongBack">
+            <option value="">-- Choose Right Song --</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- Live 3D Overlapping Card Preview Mockup -->
+      <div class="tags-title" style="margin-top:16px;">
+        <span>Live Apple Music 3D Hero Preview</span>
+        <span class="field-hint">Interactive real-time preview</span>
+      </div>
+
+      <div class="hero-mockup-card">
+        <div class="hero-mockup-glow"></div>
+        <div class="hero-mockup-body">
+          <div class="hero-mockup-info">
+            <div class="hero-mockup-badge" id="previewHeroBadge">🔥 TRENDING TONIGHT</div>
+            <div class="hero-mockup-title" id="previewHeroTitle">Midnight Mashups Mix</div>
+            <div class="hero-mockup-sub" id="previewHeroSub">Arijit • Darshan • Vishal Mishra</div>
+            <div class="hero-mockup-playbtn">
+              <span>▶</span>
+              <span>Play Mix</span>
+            </div>
+          </div>
+
+          <div class="hero-deck-3d">
+            <div class="deck-card deck-card-back" id="previewDeckBack"></div>
+            <div class="deck-card deck-card-mid" id="previewDeckMid"></div>
+            <div class="deck-card deck-card-front" id="previewDeckFront"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="go" id="btnPublishHero">
+        <span id="heroBtnText">🚀 Publish Hero Banner to App</span>
+      </button>
+
+      <button class="secondary-btn" id="btnResetHero">
+        <span>🔄 Reset to Auto Mode (Latest Songs)</span>
+      </button>
+
+      <div class="status" id="heroStatus" role="status"></div>
     </div>
   </div>
 </main>
@@ -1039,6 +1520,38 @@ function doPost(e) {
       <div class="tag-chip" data-tag="pop"><span class="emoji">✨</span><span>Pop</span></div>
     </div>
 
+    <!-- Mashup Hub Category (Discover Cards) -->
+    <div class="tags-title" style="margin-top:14px;">
+      <span>Discover Screen Mashup Card</span>
+      <span class="field-hint">Assign to Singer or Playlists Mashup</span>
+    </div>
+    <div class="mtype-grid" id="editMTypeGrid">
+      <label class="mtype-card" data-val="singermashup">
+        <input type="radio" name="editMType" value="singermashup">
+        <span class="mtype-icon">🎤</span>
+        <div class="mtype-info">
+          <span class="mtype-title">Singer / Artist</span>
+          <span class="mtype-sub">Singer Mashups card</span>
+        </div>
+      </label>
+      <label class="mtype-card" data-val="playlistmashup">
+        <input type="radio" name="editMType" value="playlistmashup">
+        <span class="mtype-icon">📜</span>
+        <div class="mtype-info">
+          <span class="mtype-title">Playlists Mashup</span>
+          <span class="mtype-sub">Playlists Mashups card</span>
+        </div>
+      </label>
+      <label class="mtype-card active" data-val="none">
+        <input type="radio" name="editMType" value="none" checked>
+        <span class="mtype-icon">🎵</span>
+        <div class="mtype-info">
+          <span class="mtype-title">None / Regular</span>
+          <span class="mtype-sub">Standard song</span>
+        </div>
+      </label>
+    </div>
+
     <!-- Update Cover (Optional) -->
     <div class="field">
       <span class="field-label">
@@ -1071,15 +1584,138 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw9IBSENtP-4p-mgDPxS
 const SECRET_KEY = "anishkumwat";
 const DRIVE_FOLDER_ID = "1hu1kGOqDz2zM8H7aNd4SzMQl9ru3FB7n";
 const DRIVE_API_KEY = "AIzaSyCRrMCDmjfP6XL8V_rGL5YNDQtts_00qKw";
+
+// ☁️ Cloudinary Default Values (Aap yahan direct code me bhi daal sakte hain):
+const DEFAULT_CLOUDINARY_CLOUD_NAME = "b6nva3ai";   // e.g. "dxy8abcde"
+const DEFAULT_CLOUDINARY_UPLOAD_PRESET = "moonlight_covers"; // e.g. "moonlight_covers"
 /* =========================== */
 
 const $ = id => document.getElementById(id);
+
+// --- CLOUDINARY CDN CONFIG & HELPERS ---
+const CFG_CLOUD_KEY = "moonlight_cloudinary_cloud_name";
+const CFG_PRESET_KEY = "moonlight_cloudinary_upload_preset";
+
+function getCloudinaryConfig() {
+  const cloudName = ($("cfgCloudName") ? $("cfgCloudName").value.trim() : "") || localStorage.getItem(CFG_CLOUD_KEY) || DEFAULT_CLOUDINARY_CLOUD_NAME || "";
+  const uploadPreset = ($("cfgUploadPreset") ? $("cfgUploadPreset").value.trim() : "") || localStorage.getItem(CFG_PRESET_KEY) || DEFAULT_CLOUDINARY_UPLOAD_PRESET || "";
+  return { cloudName, uploadPreset };
+}
+
+function updateCloudinaryBadge() {
+  const { cloudName, uploadPreset } = getCloudinaryConfig();
+  const badge = $("cloudinaryStatusBadge");
+  if (!badge) return;
+  if (cloudName && uploadPreset) {
+    badge.textContent = "🟢 CDN Active (" + cloudName + ")";
+    badge.style.background = "rgba(74,222,128,0.15)";
+    badge.style.color = "var(--ok)";
+    badge.style.borderColor = "rgba(74,222,128,0.3)";
+  } else {
+    badge.textContent = "⚪ Drive Only (Add Cloud Name to enable CDN)";
+    badge.style.background = "rgba(168,159,199,0.12)";
+    badge.style.color = "var(--muted)";
+    badge.style.borderColor = "rgba(168,159,199,0.2)";
+  }
+}
+
+async function uploadToCloudinary(file) {
+  const { cloudName, uploadPreset } = getCloudinaryConfig();
+  if (!cloudName || !uploadPreset) return null;
+
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("upload_preset", uploadPreset);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: "POST",
+    body: fd
+  });
+
+  const data = await res.json();
+  if (data.secure_url) {
+    return data.secure_url;
+  } else {
+    throw new Error(data.error?.message || "Cloudinary upload failed");
+  }
+}
+
+// Wire Cloudinary settings toggle & local storage persistence
+if ($("btnToggleCloudinaryBody")) {
+  $("btnToggleCloudinaryBody").addEventListener("click", (e) => {
+    e.stopPropagation();
+    $("cloudinarySettingsBody").classList.toggle("open");
+  });
+}
+if ($("toggleCloudinarySettings")) {
+  $("toggleCloudinarySettings").addEventListener("click", () => {
+    $("cloudinarySettingsBody").classList.toggle("open");
+  });
+}
+
+if ($("cfgCloudName") && $("cfgUploadPreset")) {
+  $("cfgCloudName").value = localStorage.getItem(CFG_CLOUD_KEY) || DEFAULT_CLOUDINARY_CLOUD_NAME || "";
+  $("cfgUploadPreset").value = localStorage.getItem(CFG_PRESET_KEY) || DEFAULT_CLOUDINARY_UPLOAD_PRESET || "";
+
+  if (!$("cfgCloudName").value || !$("cfgUploadPreset").value) {
+    $("cloudinarySettingsBody").classList.add("open");
+  }
+
+  const saveCloudinary = () => {
+    localStorage.setItem(CFG_CLOUD_KEY, $("cfgCloudName").value.trim());
+    localStorage.setItem(CFG_PRESET_KEY, $("cfgUploadPreset").value.trim());
+    updateCloudinaryBadge();
+  };
+  $("cfgCloudName").addEventListener("input", saveCloudinary);
+  $("cfgUploadPreset").addEventListener("input", saveCloudinary);
+  updateCloudinaryBadge();
+}
+
+if ($("btnTestCloudinary")) {
+  $("btnTestCloudinary").addEventListener("click", async () => {
+    const { cloudName, uploadPreset } = getCloudinaryConfig();
+    const msgEl = $("cloudinaryTestMsg");
+    msgEl.style.display = "block";
+    if (!cloudName || !uploadPreset) {
+      msgEl.style.color = "var(--err)";
+      msgEl.textContent = "❌ Please enter both Cloud Name and Unsigned Upload Preset above.";
+      return;
+    }
+    msgEl.style.color = "var(--violet-soft)";
+    msgEl.textContent = "⏳ Testing Cloudinary connection...";
+    try {
+      // 1x1 transparent png test blob
+      const pixelBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: pixelBase64, upload_preset: uploadPreset })
+      });
+      const data = await res.json();
+      if (data.secure_url) {
+        msgEl.style.color = "var(--ok)";
+        msgEl.textContent = "✅ Cloudinary Connected successfully! Thumbnails will load through ultra-fast CDN.";
+        updateCloudinaryBadge();
+      } else {
+        throw new Error(data.error?.message || "Invalid Cloud Name or Preset");
+      }
+    } catch (err) {
+      msgEl.style.color = "var(--err)";
+      msgEl.textContent = "❌ Test failed: " + err.message + ". Make sure the preset is 'Unsigned' in Cloudinary settings.";
+    }
+  });
+}
 
 // --- TAB SWITCHING ---
 $("tabUploadBtn").addEventListener("click", () => switchTab("upload"));
 $("tabManageBtn").addEventListener("click", () => {
   switchTab("manage");
   fetchDriveLibrary();
+});
+$("tabHeroBtn").addEventListener("click", () => {
+  switchTab("hero");
+  loadHeroSongsForSelect();
+  updateHeroPreview();
 });
 $("tabNotifBtn").addEventListener("click", () => {
   switchTab("notif");
@@ -1090,10 +1726,12 @@ $("tabNotifBtn").addEventListener("click", () => {
 function switchTab(name) {
   $("tabUploadBtn").classList.toggle("active", name === "upload");
   $("tabManageBtn").classList.toggle("active", name === "manage");
+  $("tabHeroBtn").classList.toggle("active", name === "hero");
   $("tabNotifBtn").classList.toggle("active", name === "notif");
 
   $("panelUpload").classList.toggle("active", name === "upload");
   $("panelManage").classList.toggle("active", name === "manage");
+  $("panelHero").classList.toggle("active", name === "hero");
   $("panelNotif").classList.toggle("active", name === "notif");
 }
 
@@ -1125,7 +1763,7 @@ async function fetchDriveLibrary() {
 
   try {
     const query = encodeURIComponent(`'${DRIVE_FOLDER_ID}' in parents and trashed = false`);
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,mimeType,thumbnailLink,size,createdTime)&orderBy=createdTime+desc&pageSize=100&key=${DRIVE_API_KEY}`);
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,mimeType,thumbnailLink,description,size,createdTime)&orderBy=createdTime+desc&pageSize=100&key=${DRIVE_API_KEY}`);
     const data = await res.json();
     const allFiles = data.files || [];
 
@@ -1153,13 +1791,18 @@ async function fetchDriveLibrary() {
         artist = stem.slice(sepIndex + 3).trim();
       }
 
-      // Check matched cover
-      const cover = coverMap.get(audio.id);
-      const coverUrl = cover ? `https://lh3.googleusercontent.com/d/${cover.id}=s400` : (audio.thumbnailLink || "");
+      // Check Cloudinary / direct cover URL in description first, then Drive cover
+      let coverUrl = "";
+      if (audio.description && audio.description.trim().startsWith("http")) {
+        coverUrl = audio.description.trim();
+      } else {
+        const cover = coverMap.get(audio.id);
+        coverUrl = cover ? `https://lh3.googleusercontent.com/d/${cover.id}=s400` : (audio.thumbnailLink || "");
+      }
 
       // Extract existing tags
       const lower = stem.toLowerCase();
-      const detectedTags = ["chill", "love", "party", "sad", "mashup", "bollywood", "punjabi", "focus", "workout", "pop"].filter(t => lower.includes(t));
+      const detectedTags = ["chill", "love", "party", "sad", "mashup", "bollywood", "punjabi", "focus", "workout", "pop", "singermashup", "playlistmashup"].filter(t => lower.includes(t));
 
       return {
         id: audio.id,
@@ -1197,14 +1840,21 @@ function renderManageList(songsToRender) {
 
     const coverStyle = song.coverUrl ? `background-image: url('${song.coverUrl}')` : "background:#251b42";
 
-    const tagsHtml = song.tags.map(t => `<span class="manage-tag-badge">${t}</span>`).join("");
+    let mtypeBadge = "";
+    if (song.rawName.toLowerCase().includes("singermashup") || song.tags.includes("singermashup")) {
+      mtypeBadge = `<span class="manage-tag-badge" style="background:rgba(124,58,237,0.35); color:#c4b5fd; font-weight:700;">🎤 Singer Mashup</span>`;
+    } else if (song.rawName.toLowerCase().includes("playlistmashup") || song.tags.includes("playlistmashup")) {
+      mtypeBadge = `<span class="manage-tag-badge" style="background:rgba(236,72,153,0.35); color:#fbcfe8; font-weight:700;">📜 Playlist Mashup</span>`;
+    }
+
+    const tagsHtml = song.tags.filter(t => t !== "singermashup" && t !== "playlistmashup").map(t => `<span class="manage-tag-badge">${t}</span>`).join("");
 
     card.innerHTML = `
       <div class="manage-cover" style="${coverStyle}"></div>
       <div class="manage-info">
         <div class="manage-title" title="${escapeHtml(song.title)}">${escapeHtml(song.title)}</div>
         <div class="manage-artist">${escapeHtml(song.artist)} • ${song.sizeMb} MB</div>
-        <div class="manage-tags">${tagsHtml || '<span class="manage-tag-badge" style="opacity:0.6">No tags</span>'}</div>
+        <div class="manage-tags">${mtypeBadge}${tagsHtml || (!mtypeBadge ? '<span class="manage-tag-badge" style="opacity:0.6">No tags</span>' : '')}</div>
       </div>
       <div class="manage-actions">
         <button class="action-btn" onclick="openEditModal('${song.id}')">✏️ Edit</button>
@@ -1232,6 +1882,24 @@ $("songSearchInput").addEventListener("input", (e) => {
 $("btnRefreshLibrary").addEventListener("click", fetchDriveLibrary);
 
 // --- EDIT MODAL LOGIC ---
+let editMType = "none";
+function setEditMType(val) {
+  editMType = val || "none";
+  document.querySelectorAll("#editMTypeGrid .mtype-card").forEach(c => {
+    const isThis = c.getAttribute("data-val") === editMType;
+    c.classList.toggle("active", isThis);
+    const radio = c.querySelector("input");
+    if (radio) radio.checked = isThis;
+  });
+  updateEditFilenamePreview();
+}
+
+document.querySelectorAll("#editMTypeGrid .mtype-card").forEach(c => {
+  c.addEventListener("click", () => {
+    setEditMType(c.getAttribute("data-val"));
+  });
+});
+
 function openEditModal(songId) {
   const song = librarySongs.find(s => s.id === songId);
   if (!song) return;
@@ -1248,11 +1916,19 @@ function openEditModal(songId) {
   $("editCoverThumb").textContent = song.coverUrl ? "" : "No Cover";
   $("editDropCover").classList.remove("filled");
 
-  // Populate tags
-  editSelectedTags = new Set(song.tags);
+  // Populate tags & mashup classification
+  editSelectedTags = new Set(song.tags.filter(t => t !== "singermashup" && t !== "playlistmashup"));
   renderEditTags();
-  updateEditFilenamePreview();
 
+  if (song.rawName.toLowerCase().includes("singermashup") || song.tags.includes("singermashup")) {
+    setEditMType("singermashup");
+  } else if (song.rawName.toLowerCase().includes("playlistmashup") || song.tags.includes("playlistmashup")) {
+    setEditMType("playlistmashup");
+  } else {
+    setEditMType("none");
+  }
+
+  updateEditFilenamePreview();
   $("editModal").classList.add("open");
 }
 
@@ -1282,7 +1958,10 @@ document.querySelectorAll("#editTagsGrid .tag-chip").forEach(chip => {
 function getEditFormattedTitle() {
   const rawTitle = $("editTitleInput").value.trim() || "Untitled Song";
   const rawArtist = $("editArtistInput").value.trim() || "Moonlight";
-  const tagsList = Array.from(editSelectedTags);
+  const tagsList = Array.from(editSelectedTags).filter(t => t !== "singermashup" && t !== "playlistmashup");
+  if (editMType !== "none") {
+    tagsList.push(editMType);
+  }
   const tagSuffix = tagsList.length ? " " + tagsList.join(" ") : "";
   return `${rawTitle} - ${rawArtist}${tagSuffix}`;
 }
@@ -1326,6 +2005,14 @@ $("btnSaveSongEdit").addEventListener("click", async () => {
     };
 
     if (editNewThumbB64 && editNewThumbFile) {
+      try {
+        const cUrl = await uploadToCloudinary(editNewThumbFile);
+        if (cUrl) {
+          payload.newCoverUrl = cUrl;
+        }
+      } catch (cErr) {
+        console.warn("Cloudinary edit upload warning:", cErr);
+      }
       payload.newThumb = editNewThumbB64;
       payload.thumbExt = extOf(editNewThumbFile);
       payload.thumbType = editNewThumbFile.type;
@@ -1427,10 +2114,31 @@ function toBase64(file){
   });
 }
 
+let uploadMType = "none";
+function setUploadMType(val) {
+  uploadMType = val || "none";
+  document.querySelectorAll("#uploadMTypeGrid .mtype-card").forEach(c => {
+    const isThis = c.getAttribute("data-val") === uploadMType;
+    c.classList.toggle("active", isThis);
+    const radio = c.querySelector("input");
+    if (radio) radio.checked = isThis;
+  });
+  refreshUpload();
+}
+
+document.querySelectorAll("#uploadMTypeGrid .mtype-card").forEach(c => {
+  c.addEventListener("click", () => {
+    setUploadMType(c.getAttribute("data-val"));
+  });
+});
+
 function getFormattedDriveTitle() {
   const rawTitle = $("title").value.trim() || "Untitled Song";
   const rawArtist = $("artist").value.trim() || "Moonlight";
-  const tagsList = Array.from(selectedTags);
+  const tagsList = Array.from(selectedTags).filter(t => t !== "singermashup" && t !== "playlistmashup");
+  if (uploadMType !== "none") {
+    tagsList.push(uploadMType);
+  }
   const tagSuffix = tagsList.length ? " " + tagsList.join(" ") : "";
   return `${rawTitle} - ${rawArtist}${tagSuffix}`;
 }
@@ -1445,6 +2153,23 @@ function refreshUpload(){
 
   const shelvesContainer = $("previewShelves");
   shelvesContainer.innerHTML = "";
+
+  if (uploadMType === "singermashup") {
+    const mPill = document.createElement("span");
+    mPill.className = "app-shelf-pill";
+    mPill.style.background = "rgba(124,58,237,0.35)";
+    mPill.style.color = "#c4b5fd";
+    mPill.textContent = "🎤 Singer Mashup";
+    shelvesContainer.appendChild(mPill);
+  } else if (uploadMType === "playlistmashup") {
+    const mPill = document.createElement("span");
+    mPill.className = "app-shelf-pill";
+    mPill.style.background = "rgba(236,72,153,0.35)";
+    mPill.style.color = "#fbcfe8";
+    mPill.textContent = "📜 Playlist Mashup";
+    shelvesContainer.appendChild(mPill);
+  }
+
   selectedTags.forEach(tag => {
     const chip = document.querySelector(`#tagsGrid .tag-chip[data-tag="${tag}"]`);
     if (chip) {
@@ -1517,29 +2242,51 @@ $("go").addEventListener("click", async () => {
   const id = newSongId();
 
   $("go").disabled = true;
-  $("btnText").textContent = "Uploading to Google Drive…";
-  showStatus($("status"), "Encoding files & uploading to Google Drive...", "info");
+  $("btnText").textContent = "Uploading…";
 
   try{
+    let cloudinaryUrl = null;
+    if (thumb) {
+      try {
+        cloudinaryUrl = await uploadToCloudinary(thumb);
+        if (cloudinaryUrl) {
+          showStatus($("status"), "☁️ Cover uploaded to Cloudinary CDN! Now uploading MP3 to Google Drive...", "info");
+        }
+      } catch (cErr) {
+        console.warn("Cloudinary upload issue:", cErr);
+        showStatus($("status"), "⚠️ Cloudinary notice: " + cErr.message + " (Continuing with Google Drive cover)...", "info");
+      }
+    }
+
+    if (!cloudinaryUrl) {
+      showStatus($("status"), "Encoding files & uploading to Google Drive...", "info");
+    }
+
     const [audioB64, thumbB64] = await Promise.all([toBase64(audio), toBase64(thumb)]);
+    const payload = {
+      key: SECRET_KEY,
+      id: id,
+      title: titleToSend,
+      audio: audioB64,
+      thumb: thumbB64,
+      thumbExt: extOf(thumb),
+      thumbType: thumb.type
+    };
+
+    if (cloudinaryUrl) {
+      payload.coverUrl = cloudinaryUrl;
+    }
+
     const res = await fetch(SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        key: SECRET_KEY,
-        id: id,
-        title: titleToSend,
-        audio: audioB64,
-        thumb: thumbB64,
-        thumbExt: extOf(thumb),
-        thumbType: thumb.type
-      })
+      body: JSON.stringify(payload)
     });
 
     const out = await res.json();
     if(!out.ok) throw new Error(out.error || "Upload failed");
 
-    showStatus($("status"), "🎉 Song uploaded successfully! Added to your Moonlight App.", "ok");
+    showStatus($("status"), "🎉 Song uploaded successfully! " + (cloudinaryUrl ? "(Cover: Cloudinary ⚡)" : "(Cover: Google Drive)"), "ok");
     // Switch to manage tab so user sees it
     setTimeout(() => {
       switchTab("manage");
@@ -1592,6 +2339,8 @@ function updateNotifPreview() {
   }
 }
 
+let notifRawImgFile = null;
+
 $("notifTitle").addEventListener("input", updateNotifPreview);
 $("notifTagline").addEventListener("input", updateNotifPreview);
 $("notifImgUrl").addEventListener("input", updateNotifPreview);
@@ -1599,6 +2348,7 @@ $("notifImgUrl").addEventListener("input", updateNotifPreview);
 $("notifImgFile").addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file) return;
+  notifRawImgFile = file;
   $("notifImgName").textContent = file.name;
   const url = URL.createObjectURL(file);
   $("notifImgThumb").style.backgroundImage = `url("${url}")`;
@@ -1633,7 +2383,6 @@ async function loadDriveSongsForSelect() {
 $("btnSendNotif").addEventListener("click", async () => {
   const title = $("notifTitle").value.trim() || "Hey {name}! 🌙";
   const tagline = $("notifTagline").value.trim();
-  const imageUrl = notifImgBase64 || $("notifImgUrl").value.trim();
   const songId = $("notifSongSelect").value;
 
   if (!tagline) {
@@ -1646,6 +2395,19 @@ $("btnSendNotif").addEventListener("click", async () => {
   showStatus($("notifStatus"), "Publishing notification to all Moonlight users...", "info");
 
   try {
+    let imageUrl = $("notifImgUrl").value.trim();
+    if (notifRawImgFile) {
+      try {
+        const cUrl = await uploadToCloudinary(notifRawImgFile);
+        if (cUrl) imageUrl = cUrl;
+      } catch (cErr) {
+        console.warn("Cloudinary notif upload warning:", cErr);
+      }
+    }
+    if (!imageUrl && notifImgBase64) {
+      imageUrl = notifImgBase64;
+    }
+
     const payload = {
       key: SECRET_KEY,
       action: "set_notification",
@@ -1699,6 +2461,186 @@ $("btnClearNotif").addEventListener("click", async () => {
   }
 });
 
+// ==========================================
+// 4. HERO BANNER STUDIO LOGIC (3D CARDS)
+// ==========================================
+let heroMode = "auto";
+let heroSongsLoaded = false;
+
+function setHeroKicker(text) {
+  $("heroKicker").value = text;
+  updateHeroPreview();
+}
+
+function updateHeroPreview() {
+  const kicker = $("heroKicker").value.trim() || "🔥 TRENDING TONIGHT";
+  const title = $("heroTitle").value.trim() || "Midnight Mashups Mix";
+  const sub = $("heroSub").value.trim() || "Arijit • Darshan • Vishal Mishra";
+
+  $("previewHeroBadge").textContent = kicker;
+  $("previewHeroTitle").textContent = title;
+  $("previewHeroSub").textContent = sub;
+
+  // Render 3D deck covers
+  let frontCover = "";
+  let midCover = "";
+  let backCover = "";
+
+  if (heroMode === "custom") {
+    const sFrontId = $("heroSongFront").value;
+    const sMidId = $("heroSongMid").value;
+    const sBackId = $("heroSongBack").value;
+
+    const sFront = librarySongs.find(s => s.id === sFrontId);
+    const sMid = librarySongs.find(s => s.id === sMidId);
+    const sBack = librarySongs.find(s => s.id === sBackId);
+
+    frontCover = sFront ? sFront.coverUrl : "";
+    midCover = sMid ? sMid.coverUrl : "";
+    backCover = sBack ? sBack.coverUrl : "";
+  } else {
+    // Auto picks top 3 library songs
+    if (librarySongs.length > 0) frontCover = librarySongs[0]?.coverUrl || "";
+    if (librarySongs.length > 1) midCover = librarySongs[1]?.coverUrl || "";
+    if (librarySongs.length > 2) backCover = librarySongs[2]?.coverUrl || "";
+  }
+
+  $("previewDeckFront").style.backgroundImage = frontCover ? `url('${frontCover}')` : "linear-gradient(135deg, #8b5cf6, #c026d3)";
+  $("previewDeckMid").style.backgroundImage = midCover ? `url('${midCover}')` : "linear-gradient(135deg, #f472b6, #8b5cf6)";
+  $("previewDeckBack").style.backgroundImage = backCover ? `url('${backCover}')` : "linear-gradient(135deg, #3b82f6, #8b5cf6)";
+}
+
+$("heroKicker").addEventListener("input", updateHeroPreview);
+$("heroTitle").addEventListener("input", updateHeroPreview);
+$("heroSub").addEventListener("input", updateHeroPreview);
+
+// Mode Cards Click
+$("heroModeAutoCard").addEventListener("click", () => {
+  heroMode = "auto";
+  $("heroModeAutoCard").classList.add("active");
+  $("heroModeCustomCard").classList.remove("active");
+  $("heroCustomPickers").style.display = "none";
+  updateHeroPreview();
+});
+
+$("heroModeCustomCard").addEventListener("click", () => {
+  heroMode = "custom";
+  $("heroModeCustomCard").classList.add("active");
+  $("heroModeAutoCard").classList.remove("active");
+  $("heroCustomPickers").style.display = "block";
+  loadHeroSongsForSelect();
+  updateHeroPreview();
+});
+
+$("heroSongFront").addEventListener("change", updateHeroPreview);
+$("heroSongMid").addEventListener("change", updateHeroPreview);
+$("heroSongBack").addEventListener("change", updateHeroPreview);
+
+async function loadHeroSongsForSelect() {
+  if (heroSongsLoaded && $("heroSongFront").options.length > 1) return;
+  if (!librarySongs.length) {
+    await fetchDriveLibrary();
+  }
+
+  const selects = [$("heroSongFront"), $("heroSongMid"), $("heroSongBack")];
+  selects.forEach(sel => {
+    sel.innerHTML = `<option value="">-- Choose a song --</option>`;
+    librarySongs.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = s.title + (s.artist ? ` (${s.artist})` : "");
+      sel.appendChild(opt);
+    });
+  });
+
+  if (librarySongs.length >= 3) {
+    $("heroSongFront").selectedIndex = 1;
+    $("heroSongMid").selectedIndex = 2;
+    $("heroSongBack").selectedIndex = 3;
+  }
+  heroSongsLoaded = true;
+  updateHeroPreview();
+}
+
+// Publish Hero Banner
+$("btnPublishHero").addEventListener("click", async () => {
+  const kicker = $("heroKicker").value.trim() || "🔥 TRENDING TONIGHT";
+  const title = $("heroTitle").value.trim() || "Midnight Mashups Mix";
+  const sub = $("heroSub").value.trim() || "Arijit • Darshan • Vishal Mishra";
+
+  let songIds = [];
+  let covers = [];
+
+  if (heroMode === "custom") {
+    const s1 = $("heroSongFront").value;
+    const s2 = $("heroSongMid").value;
+    const s3 = $("heroSongBack").value;
+    songIds = [s1, s2, s3].filter(Boolean);
+    const obj1 = librarySongs.find(s => s.id === s1);
+    const obj2 = librarySongs.find(s => s.id === s2);
+    const obj3 = librarySongs.find(s => s.id === s3);
+    covers = [obj1?.coverUrl, obj2?.coverUrl, obj3?.coverUrl].filter(Boolean);
+  }
+
+  $("btnPublishHero").disabled = true;
+  $("heroBtnText").textContent = "Publishing to Moonlight App...";
+  showStatus($("heroStatus"), "Saving 3D Hero Banner to Google Drive...", "info");
+
+  try {
+    const payload = {
+      key: SECRET_KEY,
+      action: "set_hero",
+      kicker: kicker,
+      title: title,
+      subtitle: sub,
+      mode: heroMode,
+      songIds: songIds,
+      covers: covers,
+      active: true,
+      updatedAt: Date.now()
+    };
+
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+
+    const out = await res.json();
+    if (!out.ok) throw new Error(out.error || "Failed to publish hero banner");
+
+    showStatus($("heroStatus"), "🎉 3D Hero Banner is LIVE in Moonlight App! Open Home to see it.", "ok");
+  } catch (err) {
+    showStatus($("heroStatus"), "Error publishing hero banner: " + err.message, "err");
+  } finally {
+    $("btnPublishHero").disabled = false;
+    $("heroBtnText").textContent = "🚀 Publish Hero Banner to App";
+  }
+});
+
+$("btnResetHero").addEventListener("click", async () => {
+  if (!confirm("Reset Hero Banner back to Auto Mode (showing latest songs)?")) return;
+  showStatus($("heroStatus"), "Resetting to Auto Mode...", "info");
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        key: SECRET_KEY,
+        action: "clear_hero"
+      })
+    });
+    const out = await res.json();
+    if (!out.ok) throw new Error(out.error || "Reset failed");
+
+    $("heroModeAutoCard").click();
+    showStatus($("heroStatus"), "✅ Reset to Auto Mode. App will dynamically showcase newest songs.", "ok");
+  } catch (err) {
+    showStatus($("heroStatus"), "Error resetting: " + err.message, "err");
+  }
+});
+
 function showStatus(el, msg, kind) {
   if (!msg) { el.style.display = "none"; return; }
   el.textContent = msg;
@@ -1708,6 +2650,7 @@ function showStatus(el, msg, kind) {
 // Initial setup
 refreshUpload();
 updateNotifPreview();
+updateHeroPreview();
 </script>
 </body>
 </html>

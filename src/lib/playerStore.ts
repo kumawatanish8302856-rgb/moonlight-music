@@ -1,6 +1,6 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import { hapticLight, hapticMedium, hapticSelection } from './haptics';
 import { fetchSongs, songsErrorMessage, type Song } from './songs';
 import { recordSongPlayed, recordToSong, useRecentlyPlayed, clearRecentlyPlayed, type RecentlyPlayedRecord } from './recentlyPlayed';
@@ -190,9 +190,8 @@ function pickIndex(wrap: boolean): number | null {
   const { queue, index, shuffle } = state;
   if (queue.length === 0) return null;
   if (shuffle && queue.length > 1) {
-    let i = index;
-    while (i === index) i = Math.floor(Math.random() * queue.length);
-    return i;
+    const offset = 1 + Math.floor(Math.random() * (queue.length - 1));
+    return (index + offset) % queue.length;
   }
   if (index < queue.length - 1) return index + 1;
   return wrap ? 0 : null;
@@ -310,6 +309,17 @@ export const playerStore = {
     player?.seekTo(seconds).catch(() => {});
   },
 
+  seekBy(deltaSeconds: number) {
+    if (!player) return;
+    const cur = player.currentTime || 0;
+    const dur = player.duration || 0;
+    const target = Math.max(
+      0,
+      dur > 0 ? Math.min(dur, cur + deltaSeconds) : Math.max(0, cur + deltaSeconds)
+    );
+    player.seekTo(target).catch(() => {});
+  },
+
   toggleShuffle() {
     hapticSelection();
     set({ shuffle: !state.shuffle });
@@ -349,13 +359,17 @@ export function usePlayback() {
   return { ...snapshot, current };
 }
 
-// Re-renders only when play/pause status changes
+function subscribePlaying(callback: () => void) {
+  if (!player) return () => {};
+  const sub = player.addListener('playbackStatusUpdate', callback);
+  return () => sub.remove();
+}
+
+function getPlayingSnapshot() {
+  return player?.playing ?? false;
+}
+
+// Re-renders only when play/pause status changes without cascading effect renders
 export function usePlaying() {
-  const [playing, setPlaying] = useState(player?.playing ?? false);
-  useEffect(() => {
-    if (!player) return;
-    const sub = player.addListener('playbackStatusUpdate', (s) => setPlaying(s.playing));
-    return () => sub.remove();
-  }, []);
-  return playing;
+  return useSyncExternalStore(subscribePlaying, getPlayingSnapshot, () => false);
 }
