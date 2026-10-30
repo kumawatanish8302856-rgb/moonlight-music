@@ -134,6 +134,11 @@ def get_stream_url(video_id: str):
         "skip_download": True,
         "noplaylist": True,
         "extract_flat": False,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "mweb"],
+            }
+        },
     }
 
     url = f"https://www.youtube.com/watch?v={video_id}"
