@@ -73,9 +73,8 @@ def health_check():
     return {
         "status": "online",
         "service": "Moonlight Music API",
-        "version": "1.0.3",
-        "commit": "curl-cffi-impersonate",
-        "impersonate": HAS_IMPERSONATE,
+        "version": "1.0.4",
+        "commit": "hybrid-streaming-mirrors",
         "endpoints": {
             "search": "/api/search?q={query}",
             "stream": "/api/stream/{video_id}",
@@ -163,23 +162,24 @@ def get_stream_url(video_id: str):
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to extract audio: {str(e)}")
-
-    audio_url = info.get("url")
-    if not audio_url:
-        raise HTTPException(status_code=404, detail="No suitable audio stream found")
+            audio_url = info.get("url")
+            headers = info.get("http_headers", {})
+    except Exception:
+        # Fallback to direct high-speed audio stream mirror
+        audio_url = f"https://yt.chocolatemoo53.com/latest_version?id={video_id}&itag=140&local=true"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        info = {}
 
     result = {
         "id": video_id,
-        "title": info.get("title"),
+        "title": info.get("title") or "YouTube Music Track",
         "artist": info.get("uploader") or info.get("artist") or "YouTube Music",
         "duration": info.get("duration", 0),
         "audioUrl": audio_url,
         "format": info.get("ext", "m4a"),
         "bitrate": info.get("abr", 160),
         "coverUrl": info.get("thumbnail"),
-        "headers": info.get("http_headers", {}),
+        "headers": headers,
         "expiresAt": now + CACHE_TTL_SECONDS
     }
 
@@ -239,33 +239,60 @@ async def debug_stream(video_id: str):
 async def proxy_audio_stream(video_id: str, request: Request):
     """
     Direct audio stream proxy. Supports HTTP Range requests for seeking in expo-audio.
-    Use this endpoint if direct googlevideo streaming is blocked on client network.
+    Combines high-speed audio mirror with yt-dlp fallback.
     """
-    stream_info = get_stream_url(video_id)
-    audio_url = stream_info["audioUrl"]
-
-    # Forward only clean User-Agent and Range header
-    headers = {
-        "User-Agent": stream_info.get("headers", {}).get(
-            "User-Agent",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
-        )
-    }
     range_header = request.headers.get("Range")
+    req_headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     if range_header:
-        headers["Range"] = range_header
+        req_headers["Range"] = range_header
 
-    client = httpx.AsyncClient(timeout=30.0, follow_redirects=True)
-    try:
-        upstream_req = client.build_request(request.method, audio_url, headers=headers)
-        upstream_res = await client.send(upstream_req, stream=True)
-    except Exception as e:
+    client = httpx.AsyncClient(timeout=25.0, follow_redirects=True)
+    upstream_res = None
+
+    # 1. Try Invidious mirror (itag 140 m4a / 251 opus)
+    mirrors = [
+        f"https://yt.chocolatemoo53.com/latest_version?id={video_id}&itag=140&local=true",
+        f"https://yt.chocolatemoo53.com/latest_version?id={video_id}&itag=251&local=true",
+    ]
+    for m_url in mirrors:
+        try:
+            req = client.build_request("GET", m_url, headers=req_headers)
+            res = await client.send(req, stream=True)
+            if res.status_code in (200, 206):
+                upstream_res = res
+                break
+            else:
+                await res.aclose()
+        except Exception:
+            continue
+
+    # 2. Try yt-dlp stream if mirrors fail
+    if not upstream_res:
+        try:
+            stream_info = get_stream_url(video_id)
+            audio_url = stream_info["audioUrl"]
+            ydl_headers = {"User-Agent": stream_info.get("headers", {}).get("User-Agent", "Mozilla/5.0")}
+            if range_header:
+                ydl_headers["Range"] = range_header
+            req = client.build_request("GET", audio_url, headers=ydl_headers)
+            res = await client.send(req, stream=True)
+            if res.status_code in (200, 206):
+                upstream_res = res
+            else:
+                await res.aclose()
+        except Exception:
+            pass
+
+    if not upstream_res:
         await client.aclose()
-        raise HTTPException(status_code=502, detail=f"Upstream stream error: {str(e)}")
+        raise HTTPException(status_code=502, detail="Audio stream currently unavailable.")
 
     response_headers = {
         "Content-Type": upstream_res.headers.get("Content-Type", "audio/mp4"),
         "Accept-Ranges": "bytes",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
     }
     if "Content-Length" in upstream_res.headers:
         response_headers["Content-Length"] = upstream_res.headers["Content-Length"]
