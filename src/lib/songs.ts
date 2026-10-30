@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import bundledSongsData from '../constants/songs.json';
+import cloudinaryCoversData from '../constants/cloudinary-covers.json';
 
 export type Song = {
   id: string;
@@ -11,6 +12,7 @@ export type Song = {
 };
 
 const bundledSongs: Song[] = (Array.isArray(bundledSongsData) ? bundledSongsData : []) as Song[];
+const cloudinaryCoversMap = (cloudinaryCoversData || {}) as Record<string, string>;
 
 export const DRIVE_FOLDER_ID: string = '1hu1kGOqDz2zM8H7aNd4SzMQl9ru3FB7n';
 export const DRIVE_API_KEY: string = 'AIzaSyCRrMCDmjfP6XL8V_rGL5YNDQtts_00qKw';
@@ -21,6 +23,7 @@ type DriveFile = {
   name: string;
   mimeType: string;
   thumbnailLink?: string;
+  description?: string;
 };
 
 type DriveFileList = {
@@ -50,6 +53,8 @@ export const TAG_SYNONYMS: Record<string, string[]> = {
   devotional: ['devotional', 'bhajan', 'aarti', 'krishna', 'shiva', 'ram', 'hanuman', 'god', 'prarthana', 'bhakti'],
   sad: ['sad', 'dard', 'judaai', 'alone', 'broken', 'tears', 'bewafa'],
   pop: ['pop'],
+  singermashup: ['singermashup', 'singer mashup', 'singer-mashup', 'singersmashup'],
+  playlistmashup: ['playlistmashup', 'playlist mashup', 'playlist-mashup', 'playlistsmashup'],
 };
 
 let cachedSongs: Song[] | null = bundledSongs.length > 0 ? bundledSongs : null;
@@ -103,8 +108,19 @@ export function thumbUrl(fileId: string, size: string | number = 'w300'): string
   return `https://lh3.googleusercontent.com/d/${fileId}=${cleanSize}`;
 }
 
+export function formatCloudinaryUrl(url?: string, size: number = 800): string | undefined {
+  if (!url) return undefined;
+  if (!url.includes('res.cloudinary.com') || !url.includes('/image/upload/')) return url;
+  if (url.includes('/upload/w_') || url.includes('/upload/c_')) return url;
+  return url.replace('/upload/', `/upload/w_${size},h_${size},c_fill,q_auto,f_auto/`);
+}
+
 export function toDirectCdnUrl(url?: string, defaultSize: string | number = 'w300'): string | undefined {
   if (!url) return undefined;
+  if (url.includes('res.cloudinary.com')) {
+    const numericSize = typeof defaultSize === 'number' ? defaultSize : parseInt(defaultSize.replace(/\D/g, ''), 10) || 300;
+    return formatCloudinaryUrl(url, numericSize);
+  }
   if (url.includes('lh3.googleusercontent.com/d/')) {
     return url.replace(/=sw(\d+)/, '=w$1');
   }
@@ -153,7 +169,7 @@ async function listFolderFiles(): Promise<DriveFile[]> {
   do {
     const params = new URLSearchParams({
       q: `'${DRIVE_FOLDER_ID}' in parents and trashed = false`,
-      fields: 'nextPageToken,files(id,name,mimeType,thumbnailLink,createdTime)',
+      fields: 'nextPageToken,files(id,name,mimeType,thumbnailLink,description,createdTime)',
       orderBy: 'createdTime desc',
       pageSize: '1000',
       key: DRIVE_API_KEY,
@@ -264,9 +280,24 @@ export async function fetchSongs(options: { force?: boolean } = {}): Promise<Son
 
       const songs = files.filter(isAudioFile).map((file) => {
         const fallback = parseSongName(file.name);
-        const cover = resolveCover(file, fallback.title);
-        const fullCover = cover ? coverUrl(cover.id, 'w800') : toDirectCdnUrl(file.thumbnailLink, 'w800');
-        const thumbCover = cover ? thumbUrl(cover.id, 'w300') : toDirectCdnUrl(file.thumbnailLink, 'w300');
+        let fullCover: string | undefined;
+        let thumbCover: string | undefined;
+
+        // 1. High priority: Cloudinary or direct CDN URL stored in Google Drive description or local Cloudinary map
+        const mappedCloudinary = cloudinaryCoversMap[file.id];
+        if (file.description && file.description.trim().startsWith('http')) {
+          const directUrl = file.description.trim();
+          fullCover = formatCloudinaryUrl(directUrl, 800);
+          thumbCover = formatCloudinaryUrl(directUrl, 300);
+        } else if (mappedCloudinary) {
+          fullCover = formatCloudinaryUrl(mappedCloudinary, 800);
+          thumbCover = formatCloudinaryUrl(mappedCloudinary, 300);
+        } else {
+          // 2. Fallback: Google Drive paired cover image
+          const cover = resolveCover(file, fallback.title);
+          fullCover = cover ? coverUrl(cover.id, 'w800') : toDirectCdnUrl(file.thumbnailLink, 'w800');
+          thumbCover = cover ? thumbUrl(cover.id, 'w300') : toDirectCdnUrl(file.thumbnailLink, 'w300');
+        }
 
         return {
           id: file.id,

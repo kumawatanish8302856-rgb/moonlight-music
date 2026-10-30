@@ -264,12 +264,18 @@ export default function SearchScreen() {
   const retry = useCallback(() => {
     if (mode === 'tag') {
       const c = CATEGORIES.find((x) => x.title === query);
-      if (c) runTag(c);
+      if (c) {
+        runTag(c);
+      } else if (query === 'Singer Mashups') {
+        runTagByName('singermashup', 'Singer Mashups');
+      } else if (query === 'Playlists Mashups') {
+        runTagByName('playlistmashup', 'Playlists Mashups');
+      }
     } else {
       void playerStore.loadSongs(true);
       setRetryKey((k) => k + 1);
     }
-  }, [mode, query, runTag]);
+  }, [mode, query, runTag, runTagByName]);
 
   const onHeaderPlayPress = useCallback(() => {
     if (!results?.length) return;
