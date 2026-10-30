@@ -172,6 +172,7 @@ def get_stream_url(video_id: str):
         "format": info.get("ext", "m4a"),
         "bitrate": info.get("abr", 160),
         "coverUrl": info.get("thumbnail"),
+        "headers": info.get("http_headers", {}),
         "expiresAt": now + CACHE_TTL_SECONDS
     }
 
@@ -179,7 +180,7 @@ def get_stream_url(video_id: str):
     stream_cache[video_id] = result
     return result
 
-@app.get("/api/proxy/{video_id}")
+@app.api_route("/api/proxy/{video_id}", methods=["GET", "HEAD"])
 async def proxy_audio_stream(video_id: str, request: Request):
     """
     Direct audio stream proxy. Supports HTTP Range requests for seeking in expo-audio.
@@ -188,15 +189,15 @@ async def proxy_audio_stream(video_id: str, request: Request):
     stream_info = get_stream_url(video_id)
     audio_url = stream_info["audioUrl"]
 
-    # Forward Range headers for seeking
-    headers = {}
+    # Forward matching YouTube HTTP headers + client Range headers for seeking
+    headers = dict(stream_info.get("headers", {}))
     range_header = request.headers.get("Range")
     if range_header:
         headers["Range"] = range_header
 
     client = httpx.AsyncClient(timeout=30.0, follow_redirects=True)
     try:
-        upstream_req = client.build_request("GET", audio_url, headers=headers)
+        upstream_req = client.build_request(request.method, audio_url, headers=headers)
         upstream_res = await client.send(upstream_req, stream=True)
     except Exception as e:
         await client.aclose()
@@ -210,6 +211,11 @@ async def proxy_audio_stream(video_id: str, request: Request):
         response_headers["Content-Length"] = upstream_res.headers["Content-Length"]
     if "Content-Range" in upstream_res.headers:
         response_headers["Content-Range"] = upstream_res.headers["Content-Range"]
+
+    if request.method == "HEAD":
+        await upstream_res.aclose()
+        await client.aclose()
+        return Response(status_code=upstream_res.status_code, headers=response_headers)
 
     async def stream_generator():
         try:
