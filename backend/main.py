@@ -68,7 +68,8 @@ def health_check():
     return {
         "status": "online",
         "service": "Moonlight Music API",
-        "version": "1.0.0",
+        "version": "1.0.1",
+        "commit": "632ace6",
         "endpoints": {
             "search": "/api/search?q={query}",
             "stream": "/api/stream/{video_id}",
@@ -128,7 +129,7 @@ def get_stream_url(video_id: str):
         return cached
 
     ydl_opts = {
-        "format": "bestaudio[ext=m4a]/bestaudio/best",
+        "format": "bestaudio/best",
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
@@ -140,6 +141,16 @@ def get_stream_url(video_id: str):
             }
         },
     }
+
+    cookie_content = os.environ.get("YOUTUBE_COOKIES")
+    if cookie_content:
+        cookie_path = os.path.join(os.environ.get("TMPDIR", "/tmp"), "youtube_cookies.txt")
+        try:
+            with open(cookie_path, "w", encoding="utf-8") as cf:
+                cf.write(cookie_content)
+            ydl_opts["cookiefile"] = cookie_path
+        except Exception:
+            pass
 
     url = f"https://www.youtube.com/watch?v={video_id}"
     try:
