@@ -68,8 +68,8 @@ def health_check():
     return {
         "status": "online",
         "service": "Moonlight Music API",
-        "version": "1.0.1",
-        "commit": "632ace6",
+        "version": "1.0.2",
+        "commit": "visionos-streaming",
         "endpoints": {
             "search": "/api/search?q={query}",
             "stream": "/api/stream/{video_id}",
@@ -129,7 +129,7 @@ def get_stream_url(video_id: str):
         return cached
 
     ydl_opts = {
-        "format": "bestaudio/best",
+        "format": "140/ba/b",
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
@@ -138,7 +138,7 @@ def get_stream_url(video_id: str):
         "remote_components": ["ejs:github"],
         "extractor_args": {
             "youtube": {
-                "player_client": ["android", "ios", "mweb"],
+                "player_client": ["visionos", "tv_embedded"],
             }
         },
     }
@@ -233,8 +233,13 @@ async def proxy_audio_stream(video_id: str, request: Request):
     stream_info = get_stream_url(video_id)
     audio_url = stream_info["audioUrl"]
 
-    # Forward matching YouTube HTTP headers + client Range headers for seeking
-    headers = dict(stream_info.get("headers", {}))
+    # Forward only clean User-Agent and Range header
+    headers = {
+        "User-Agent": stream_info.get("headers", {}).get(
+            "User-Agent",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        )
+    }
     range_header = request.headers.get("Range")
     if range_header:
         headers["Range"] = range_header
