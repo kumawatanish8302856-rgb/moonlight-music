@@ -181,6 +181,49 @@ def get_stream_url(video_id: str):
     stream_cache[video_id] = result
     return result
 
+@app.get("/api/debug/{video_id}")
+async def debug_stream(video_id: str):
+    import urllib.request
+    try:
+        # Check current public IP
+        ip_res = httpx.get("https://api.ipify.org?format=json", timeout=5).json()
+        current_ip = ip_res.get("ip")
+    except Exception as e:
+        current_ip = f"Error: {e}"
+
+    stream_info = get_stream_url(video_id)
+    audio_url = stream_info["audioUrl"]
+    headers = dict(stream_info.get("headers", {}))
+
+    # Test urllib
+    urllib_result = ""
+    try:
+        req = urllib.request.Request(audio_url, headers={"User-Agent": headers.get("User-Agent", "")})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            sample = r.read(64)
+            urllib_result = f"OK: {len(sample)} bytes, HTTP {r.status}"
+    except Exception as e:
+        urllib_result = f"Err: {e}"
+
+    # Test httpx
+    httpx_result = ""
+    try:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+            resp = await client.get(audio_url, headers=headers)
+            httpx_result = f"HTTP {resp.status_code}, length={len(resp.content)}"
+    except Exception as e:
+        httpx_result = f"Err: {e}"
+
+    return {
+        "current_egress_ip": current_ip,
+        "video_id": video_id,
+        "format": stream_info.get("format"),
+        "headers": headers,
+        "audio_url_snippet": audio_url[:120],
+        "urllib_result": urllib_result,
+        "httpx_result": httpx_result,
+    }
+
 @app.api_route("/api/proxy/{video_id}", methods=["GET", "HEAD"])
 async def proxy_audio_stream(video_id: str, request: Request):
     """
