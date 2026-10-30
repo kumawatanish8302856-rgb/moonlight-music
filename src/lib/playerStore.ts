@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { useSyncExternalStore } from 'react';
 import { hapticLight, hapticMedium, hapticSelection } from './haptics';
 import { fetchSongs, songsErrorMessage, type Song } from './songs';
+import { getPlayableAudioUri } from './audioCache';
 import { recordSongPlayed, recordToSong, useRecentlyPlayed, clearRecentlyPlayed, type RecentlyPlayedRecord } from './recentlyPlayed';
 import {
   toggleLikeSong,
@@ -170,12 +171,17 @@ function loadCurrent() {
   if (!song || !player) return;
   handledFinishFor = '';
   recordedPlaybackFor = '';
-  try {
-    player.replace({ uri: song.audioUrl });
-    safePlay();
-  } catch (err) {
-    console.warn('Playback error:', err);
-  }
+
+  void getPlayableAudioUri(song).then((uriToPlay) => {
+    if (state.queue[state.index]?.id !== song.id || !player) return;
+    try {
+      player.replace({ uri: uriToPlay });
+      safePlay();
+    } catch (err) {
+      console.warn('Playback error:', err);
+    }
+  });
+
   try {
     player.setActiveForLockScreen(true, {
       title: song.title,

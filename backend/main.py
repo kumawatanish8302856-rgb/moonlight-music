@@ -73,8 +73,8 @@ def health_check():
     return {
         "status": "online",
         "service": "Moonlight Music API",
-        "version": "1.0.4",
-        "commit": "hybrid-streaming-mirrors",
+        "version": "1.1.0",
+        "commit": "production-hybrid-fast-stream",
         "endpoints": {
             "search": "/api/search?q={query}",
             "stream": "/api/stream/{video_id}",
@@ -186,54 +186,6 @@ def get_stream_url(video_id: str):
     # Store in memory cache
     stream_cache[video_id] = result
     return result
-
-@app.get("/api/debug/{video_id}")
-async def debug_stream(video_id: str):
-    import urllib.request
-    results = {}
-
-    # Test 1: Invidious
-    for inst in ["https://yt.chocolatemoo53.com", "https://inv.nadeko.net", "https://invidious.nerdvpn.de"]:
-        try:
-            url = f"{inst}/latest_version?id={video_id}&itag=140&local=true"
-            async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
-                r = await client.get(url, headers={"Range": "bytes=0-100"})
-                results[f"invidious_{inst}"] = f"HTTP {r.status_code}, len={len(r.content)}"
-        except Exception as e:
-            results[f"invidious_{inst}"] = f"Err: {e}"
-
-    # Test 2: yt-dlp different clients
-    clients_to_test = [
-        ("default", None),
-        ("tv_embedded", ["tv_embedded"]),
-        ("visionos", ["visionos"]),
-        ("mweb", ["mweb"]),
-        ("ios", ["ios"]),
-    ]
-
-    for name, p_client in clients_to_test:
-        opts: Dict[str, Any] = {
-            "format": "140/ba/b",
-            "quiet": True,
-            "no_warnings": True,
-            "skip_download": True,
-            "remote_components": ["ejs:github"],
-        }
-        if p_client:
-            opts["extractor_args"] = {"youtube": {"player_client": p_client}}
-        if HAS_IMPERSONATE:
-            try:
-                opts["impersonate"] = ImpersonateTarget.from_str("chrome")
-            except Exception:
-                pass
-        try:
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
-                results[f"ytdlp_{name}"] = f"OK: {info.get('format_id')}, url_len={len(info.get('url', ''))}"
-        except Exception as e:
-            results[f"ytdlp_{name}"] = f"Err: {str(e)[:100]}"
-
-    return results
 
 @app.api_route("/api/proxy/{video_id}", methods=["GET", "HEAD"])
 async def proxy_audio_stream(video_id: str, request: Request):
