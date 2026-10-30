@@ -8,6 +8,11 @@ from fastapi.responses import StreamingResponse
 import httpx
 from ytmusicapi import YTMusic
 import yt_dlp
+try:
+    from yt_dlp.networking.impersonate import ImpersonateTarget
+    HAS_IMPERSONATE = True
+except Exception:
+    HAS_IMPERSONATE = False
 
 app = FastAPI(
     title="Moonlight Music API",
@@ -68,8 +73,9 @@ def health_check():
     return {
         "status": "online",
         "service": "Moonlight Music API",
-        "version": "1.0.2",
-        "commit": "visionos-streaming",
+        "version": "1.0.3",
+        "commit": "curl-cffi-impersonate",
+        "impersonate": HAS_IMPERSONATE,
         "endpoints": {
             "search": "/api/search?q={query}",
             "stream": "/api/stream/{video_id}",
@@ -136,12 +142,12 @@ def get_stream_url(video_id: str):
         "noplaylist": True,
         "extract_flat": False,
         "remote_components": ["ejs:github"],
-        "extractor_args": {
-            "youtube": {
-                "player_client": ["visionos", "tv_embedded"],
-            }
-        },
     }
+    if HAS_IMPERSONATE:
+        try:
+            ydl_opts["impersonate"] = ImpersonateTarget.from_str("chrome")
+        except Exception:
+            pass
 
     cookie_content = os.environ.get("YOUTUBE_COOKIES")
     if cookie_content:
