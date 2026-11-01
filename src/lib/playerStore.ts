@@ -5,6 +5,7 @@ import { hapticLight, hapticMedium, hapticSelection } from './haptics';
 import { fetchSongs, songsErrorMessage, type Song } from './songs';
 import { getPlayableAudioUri } from './audioCache';
 import { recordSongPlayed, recordToSong, useRecentlyPlayed, clearRecentlyPlayed, type RecentlyPlayedRecord } from './recentlyPlayed';
+import { recordYouTubeSong } from './youtubeHistory';
 import {
   toggleLikeSong,
   unlikeSong,
@@ -227,6 +228,9 @@ player?.addListener('playbackStatusUpdate', (status) => {
     if (cur && cur.id && recordedPlaybackFor !== cur.id) {
       recordedPlaybackFor = cur.id;
       void recordSongPlayed(cur);
+      if (cur.source === 'youtube') {
+        void recordYouTubeSong(cur);
+      }
     }
   }
 
@@ -267,6 +271,10 @@ export const playerStore = {
   playQueue(queue: Song[], index: number) {
     if (!queue[index]) return;
     hapticLight();
+    const song = queue[index];
+    if (song.source === 'youtube') {
+      void recordYouTubeSong(song);
+    }
     set({ queue, index });
     loadCurrent();
   },

@@ -8,6 +8,7 @@ import {
   Animated,
   BackHandler,
   Dimensions,
+  Easing,
   PanResponder,
   StyleSheet,
   Text,
@@ -177,6 +178,81 @@ function LoadingLogo({ audioPlayer }: { audioPlayer: AudioPlayer }) {
           style={[styles.loadingLogo, { transform: [{ rotate }] }]}
         />
       </View>
+    </View>
+  );
+}
+
+function RotatingMoonlightDisc({ size, playing }: { size: number; playing: boolean }) {
+  const [rotation] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    let anim: Animated.CompositeAnimation | null = null;
+    if (playing) {
+      rotation.setValue(0);
+      anim = Animated.loop(
+        Animated.timing(rotation, {
+          toValue: 1,
+          duration: 7000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      );
+      anim.start();
+    } else {
+      rotation.stopAnimation();
+    }
+    return () => {
+      anim?.stop();
+    };
+  }, [playing, rotation]);
+
+  const rotate = rotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const centerSize = Math.round(size * 0.44);
+  const logoSize = Math.round(size * 0.28);
+
+  return (
+    <View style={[styles.vinylOuter, { width: size, height: size, borderRadius: size / 2 }]}>
+      <Animated.View
+        style={[
+          styles.vinylBody,
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            transform: [{ rotate }],
+          },
+        ]}
+      >
+        {/* Subtle Vinyl Grooves */}
+        <View style={[styles.vinylGroove, { width: size * 0.9, height: size * 0.9, borderRadius: (size * 0.9) / 2 }]} />
+        <View style={[styles.vinylGroove, { width: size * 0.76, height: size * 0.76, borderRadius: (size * 0.76) / 2 }]} />
+        <View style={[styles.vinylGroove, { width: size * 0.62, height: size * 0.62, borderRadius: (size * 0.62) / 2 }]} />
+
+        {/* Center Moonlight Vinyl Label */}
+        <LinearGradient
+          colors={['#2e1065', '#1e1b4b', '#0f172a']}
+          style={[
+            styles.vinylLabel,
+            {
+              width: centerSize,
+              height: centerSize,
+              borderRadius: centerSize / 2,
+            },
+          ]}
+        >
+          <Animated.Image
+            source={require('@/assets/images/moonlight-logo.png')}
+            resizeMode="contain"
+            style={{ width: logoSize, height: logoSize }}
+          />
+          {/* Spindle center hole */}
+          <View style={styles.vinylSpindle} />
+        </LinearGradient>
+      </Animated.View>
     </View>
   );
 }
@@ -368,8 +444,19 @@ export default function PlayerScreen() {
         {/* Artwork with Left & Right 10-sec Seek Tap Zones */}
         <View style={styles.artArea}>
           <Animated.View style={[styles.artShadow, { transform: [{ scale }] }]}>
-            <View style={{ width: ART, height: ART, borderRadius: 28, overflow: 'hidden' }}>
-              <Cover song={current} size={ART} radius={28} />
+            <View
+              style={{
+                width: ART,
+                height: ART,
+                borderRadius: current.source === 'youtube' ? ART / 2 : 28,
+                overflow: 'hidden',
+              }}
+            >
+              {current.source === 'youtube' ? (
+                <RotatingMoonlightDisc size={ART} playing={playing} />
+              ) : (
+                <Cover song={current} size={ART} radius={28} />
+              )}
 
               {/* Tap Left & Right for 10s Rewind / Fast-Forward */}
               <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -675,4 +762,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+
+  /* Moonlight Spinning Vinyl Disc */
+  vinylOuter: {
+    backgroundColor: '#0c0817',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(167,139,250,0.25)',
+  },
+  vinylBody: {
+    backgroundColor: '#0d091a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vinylGroove: {
+    position: 'absolute',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  vinylLabel: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(167,139,250,0.4)',
+  },
+  vinylSpindle: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#08060f',
+    borderWidth: 2,
+    borderColor: MOON.primarySoft,
+  },
 });

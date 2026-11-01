@@ -79,3 +79,19 @@ function triggerBackgroundCache(song: Song, localUri: string): void {
 
   activeDownloads.set(song.id, downloadPromise);
 }
+
+/**
+ * Checks whether the song's audio file is fully downloaded and cached locally on phone.
+ */
+export async function isSongCached(songId: string): Promise<boolean> {
+  if (Platform.OS === 'web' || !FileSystem.cacheDirectory) return false;
+  try {
+    const filename = getSafeFilename(songId);
+    const localUri = `${CACHE_DIR}${filename}`;
+    const fileInfo = await FileSystem.getInfoAsync(localUri);
+    return Boolean(fileInfo.exists && (fileInfo.size ?? 0) > 100 * 1024);
+  } catch {
+    return false;
+  }
+}
+

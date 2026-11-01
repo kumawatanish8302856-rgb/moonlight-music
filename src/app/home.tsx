@@ -33,6 +33,7 @@ import {
 } from '../lib/notifications';
 import { playerStore, useLibrary, usePlayback, usePlaying, type Song } from '../lib/playerStore';
 import { toDirectCdnUrl } from '../lib/songs';
+import { useYouTubeHistory } from '../lib/youtubeHistory';
 
 // ---------- Moonlight theme ----------
 const MOON = {
@@ -404,6 +405,76 @@ const SquareSection = memo(function SquareSection({
   );
 });
 
+// ---------- Arrangement: You Heard This (YouTube stream history) ----------
+const YouHeardThisSection = memo(function YouHeardThisSection({
+  songs,
+  onPlay,
+  onSeeAll,
+}: {
+  songs: Song[];
+  onPlay: (song: Song, index: number) => void;
+  onSeeAll: () => void;
+}) {
+  const { width } = useWindowDimensions();
+  const cardWidth = Math.min(150, Math.round(width * 0.38));
+
+  if (!songs || songs.length === 0) return null;
+
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <View style={{ flex: 1, marginRight: 12 }}>
+          <Text style={styles.sectionKicker}>STREAMED & CACHED</Text>
+          <Text style={styles.sectionTitle} numberOfLines={1}>
+            You heard this
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.seeAllBtn}
+          activeOpacity={0.8}
+          onPress={onSeeAll}
+          accessibilityRole="button"
+          accessibilityLabel="See all streamed songs"
+        >
+          <Text style={styles.seeAllText}>See all</Text>
+          <Ionicons name="chevron-forward" size={13} color={MOON.primarySoft} />
+        </TouchableOpacity>
+      </View>
+
+      <FlatList
+        data={songs.slice(0, 5)}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        nestedScrollEnabled
+        initialNumToRender={5}
+        contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
+        keyExtractor={(song) => song.id}
+        ItemSeparatorComponent={renderGap}
+        renderItem={({ item, index }) => (
+          <TouchableOpacity
+            style={{ width: cardWidth }}
+            activeOpacity={0.85}
+            onPress={() => onPlay(item, index)}
+          >
+            <View style={[styles.squareThumb, { width: cardWidth, height: cardWidth, borderRadius: 12 }]}>
+              <Cover song={item} size={cardWidth} radius={12} />
+              <View style={styles.cardPlayOverlay}>
+                <Ionicons name="play" size={16} color="#fff" />
+              </View>
+            </View>
+            <Text style={styles.squareTitle} numberOfLines={1} ellipsizeMode="tail">
+              {item.title}
+            </Text>
+            <Text style={styles.squareSub} numberOfLines={1} ellipsizeMode="tail">
+              {item.artist}
+            </Text>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
+  );
+});
+
 // ---------- Screen ----------
 export default function HomeScreen() {
   const router = useRouter();
@@ -411,6 +482,7 @@ export default function HomeScreen() {
   const { songs, loading, error } = useLibrary();
   const { current } = usePlayback();
   const playing = usePlaying();
+  const ytHistory = useYouTubeHistory();
   const mood = MOODS.find((m) => m.id === moodId) ?? MOODS[0];
   // Top 5 recently added songs in the app
   const newSongs = useMemo(() => songs.slice(0, 5), [songs]);
@@ -815,6 +887,19 @@ export default function HomeScreen() {
               </View>
             </View>
           </TouchableOpacity>
+
+          {/* You Heard This: Only rendered if user has streamed YouTube songs */}
+          {ytHistory.length > 0 && (
+            <YouHeardThisSection
+              songs={ytHistory}
+              onPlay={(_song, index) => {
+                playerStore.playQueue(ytHistory, index);
+              }}
+              onSeeAll={() => {
+                router.push('/recently-heard' as any);
+              }}
+            />
+          )}
 
           {/* Arrangement 3: square carousels at the very top */}
           <SquareSection
@@ -1340,6 +1425,33 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(139,92,246,0.08)',
   },
   playAllText: { color: MOON.primarySoft, fontSize: 12, fontWeight: '700', marginLeft: 6 },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.35)',
+    backgroundColor: 'rgba(139,92,246,0.1)',
+  },
+  seeAllText: {
+    color: MOON.primarySoft,
+    fontSize: 12,
+    fontWeight: '700',
+    marginRight: 2,
+  },
+  cardPlayOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(139,92,246,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Arrangement 1 – song row
   row: {
