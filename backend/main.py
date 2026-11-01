@@ -73,13 +73,16 @@ def health_check():
     return {
         "status": "online",
         "service": "Moonlight Music API",
-        "version": "1.2.0",
-        "commit": "curated-4-channels",
+        "version": "1.3.0",
+        "commit": "curated-7-channels",
         "channels": [
             "T-Series (@tseries)",
             "Zee Music Company (@zeemusiccompany)",
             "Saregama Music (@SaregamaMusic)",
-            "Sony Music India (@SonyMusicIndia)"
+            "Sony Music India (@SonyMusicIndia)",
+            "YRF (@yrf / @yrfmusic)",
+            "Tips Official (@tipsofficial)",
+            "Speed Records (@speedrecords)"
         ],
         "endpoints": {
             "search": "/api/search?q={query}",
@@ -95,6 +98,10 @@ ALLOWED_CHANNELS = {
     "@zeemusiccompany",
     "@saregamamusic",
     "@sonymusicindia",
+    "@yrf",
+    "@yrfmusic",
+    "@tipsofficial",
+    "@speedrecords",
     "t-series",
     "tseries",
     "zee music company",
@@ -103,6 +110,15 @@ ALLOWED_CHANNELS = {
     "saregama",
     "sony music india",
     "sony music",
+    "yrf",
+    "yrf music",
+    "yash raj films",
+    "tips official",
+    "tips industries",
+    "tips music",
+    "tips",
+    "speed records",
+    "speedrecords",
 }
 
 DISALLOWED_KEYWORDS = {
@@ -140,7 +156,7 @@ def clean_song_title(title: str) -> str:
         flags=re.IGNORECASE,
     )
     cleaned = re.sub(r"\s*\|\s*.*$", "", cleaned)
-    cleaned = re.sub(r"\s*-\s*(?:T-Series|Zee Music|Sony Music|Saregama).*$", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*-\s*(?:T-Series|Zee Music|Sony Music|Saregama|YRF|Tips|Speed Records).*$", "", cleaned, flags=re.IGNORECASE)
     return cleaned.strip()
 
 @app.get("/api/search")
@@ -149,11 +165,14 @@ def search_songs(
     limit: int = Query(3, ge=1, le=10, description="Max songs to return")
 ):
     """
-    Smart search strictly filtered to 4 verified channels:
+    Smart search strictly filtered to 7 verified channels:
     - T-Series (@tseries)
     - Zee Music Company (@zeemusiccompany)
     - Saregama Music (@SaregamaMusic)
     - Sony Music India (@SonyMusicIndia)
+    - YRF (@yrf / @yrfmusic)
+    - Tips Official (@tipsofficial)
+    - Speed Records (@speedrecords)
     Returns at most `limit` (default 3) pristine matching tracks.
     """
     clean_q = q.strip().lower()
@@ -173,7 +192,7 @@ def search_songs(
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            search_res = ydl.extract_info(f"ytsearch20:{q}", download=False)
+            search_res = ydl.extract_info(f"ytsearch25:{q}", download=False)
             entries = search_res.get("entries", [])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
