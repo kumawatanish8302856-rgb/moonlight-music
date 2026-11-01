@@ -84,13 +84,16 @@ def health_check():
     }
 
 @app.get("/api/search")
-def search_songs(q: str = Query(..., min_length=1, description="Search song title or artist")):
+def search_songs(
+    q: str = Query(..., min_length=1, description="Search song title or artist"),
+    limit: int = Query(25, ge=1, le=50, description="Max songs to return")
+):
     """
     Search YouTube Music for tracks matching the query.
     Returns clean JSON compatible with Moonlight Player.
     """
     try:
-        results = ytm.search(q, filter="songs", limit=25)
+        results = ytm.search(q, filter="songs", limit=limit)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 

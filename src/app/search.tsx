@@ -207,17 +207,17 @@ export default function SearchScreen() {
           libraryLoaded && !libraryError ? librarySongs : undefined
         );
 
-        // 2. Also search YouTube catalog
+        // 2. Also search YouTube catalog (Top 3 smart results)
         let ytHits: Song[] = [];
         try {
-          ytHits = await searchYouTubeMusic(q);
+          ytHits = await searchYouTubeMusic(q, 3);
         } catch {
           // Ignore online search failure if offline
         }
 
         if (id !== reqId.current) return;
 
-        // 3. Combine: Drive hits first, then YouTube hits (deduplicated by title)
+        // 3. Combine: Drive hits first, then at most 3 smart YouTube hits
         const combined: Song[] = [...driveHits];
         const seenTitles = new Set(driveHits.map((s) => s.title.toLowerCase().trim()));
         for (const y of ytHits) {
@@ -225,6 +225,7 @@ export default function SearchScreen() {
           if (!seenTitles.has(normTitle)) {
             combined.push(y);
             seenTitles.add(normTitle);
+            if (combined.length - driveHits.length >= 3) break;
           }
         }
 

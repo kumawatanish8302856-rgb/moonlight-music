@@ -477,26 +477,49 @@ export function songsErrorMessage(error?: unknown): string {
   return message;
 }
 
-export async function searchYouTubeMusic(query: string): Promise<Song[]> {
+function cleanSongTitle(rawTitle: string): string {
+  return rawTitle
+    .replace(/\s*[\(\[](?:Official\s*(?:Music\s*)?Video|Full\s*Song|Audio|Lyric\s*Video|Lyrical|4K|HD|Remastered|Official\s*Audio)[\)\]]/gi, '')
+    .replace(/\s*\|\s*.*$/, '')
+    .replace(/\s*-\s*T-Series.*$/i, '')
+    .replace(/\s*-\s*Zee Music.*$/i, '')
+    .trim();
+}
+
+export async function searchYouTubeMusic(query: string, limit = 3): Promise<Song[]> {
   const q = query.trim();
   if (!q) return [];
   try {
-    const res = await fetch(`${MOONLIGHT_API_URL}/api/search?q=${encodeURIComponent(q)}`);
+    const res = await fetch(`${MOONLIGHT_API_URL}/api/search?q=${encodeURIComponent(q)}&limit=${limit * 3}`);
     if (!res.ok) throw new Error(`YouTube API returned ${res.status}`);
     const data = (await res.json()) as { songs?: { id: string; title: string; artist: string; coverUrl?: string }[] };
-    const songs: Song[] = (data.songs || []).map((s) => ({
-      id: `yt_${s.id}`,
-      title: s.title,
-      artist: s.artist,
-      audioUrl: `${MOONLIGHT_API_URL}/api/proxy/${s.id}`,
-      coverUrl: s.coverUrl,
-      thumb: s.coverUrl,
-      source: 'youtube',
-    }));
-    return songs;
+    const rawList = data.songs || [];
+
+    // Clean titles and filter duplicates
+    const unique: Song[] = [];
+    const seenTitles = new Set<string>();
+
+    for (const s of rawList) {
+      const cleanTitle = cleanSongTitle(s.title);
+      const normKey = cleanTitle.toLowerCase();
+      if (!seenTitles.has(normKey)) {
+        seenTitles.add(normKey);
+        unique.push({
+          id: `yt_${s.id}`,
+          title: cleanTitle,
+          artist: s.artist,
+          audioUrl: `${MOONLIGHT_API_URL}/api/proxy/${s.id}`,
+          coverUrl: s.coverUrl,
+          thumb: s.coverUrl,
+        });
+        if (unique.length >= limit) break;
+      }
+    }
+
+    return unique;
   } catch (error) {
     console.warn('YouTube search failed:', error);
-    throw error;
+    return [];
   }
 }
 
@@ -507,12 +530,11 @@ export async function fetchYouTubeTrending(country = 'IN'): Promise<Song[]> {
     const data = (await res.json()) as { songs?: { id: string; title: string; artist: string; coverUrl?: string }[] };
     const songs: Song[] = (data.songs || []).map((s) => ({
       id: `yt_${s.id}`,
-      title: s.title,
+      title: cleanSongTitle(s.title),
       artist: s.artist,
       audioUrl: `${MOONLIGHT_API_URL}/api/proxy/${s.id}`,
       coverUrl: s.coverUrl,
       thumb: s.coverUrl,
-      source: 'youtube',
     }));
     return songs;
   } catch (error) {
