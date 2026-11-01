@@ -73,8 +73,14 @@ def health_check():
     return {
         "status": "online",
         "service": "Moonlight Music API",
-        "version": "1.1.0",
-        "commit": "production-hybrid-fast-stream",
+        "version": "1.2.0",
+        "commit": "curated-4-channels",
+        "channels": [
+            "T-Series (@tseries)",
+            "Zee Music Company (@zeemusiccompany)",
+            "Saregama Music (@SaregamaMusic)",
+            "Sony Music India (@SonyMusicIndia)"
+        ],
         "endpoints": {
             "search": "/api/search?q={query}",
             "stream": "/api/stream/{video_id}",
@@ -83,47 +89,141 @@ def health_check():
         }
     }
 
+# Allowed YouTube channels
+ALLOWED_CHANNELS = {
+    "@tseries",
+    "@zeemusiccompany",
+    "@saregamamusic",
+    "@sonymusicindia",
+    "t-series",
+    "tseries",
+    "zee music company",
+    "zeemusic",
+    "saregama music",
+    "saregama",
+    "sony music india",
+    "sony music",
+}
+
+DISALLOWED_KEYWORDS = {
+    "karaoke",
+    "jukebox",
+    "audio jukebox",
+    "full album",
+    "mashup jukebox",
+}
+
+search_cache: Dict[str, Dict[str, Any]] = {}
+
+def is_allowed_channel_entry(item: Dict[str, Any]) -> bool:
+    u_id = (item.get("uploader_id") or "").lower()
+    uploader = (item.get("uploader") or "").lower()
+    channel = (item.get("channel") or "").lower()
+    title = (item.get("title") or "").lower()
+
+    # Filter out karaoke and full 1-hour jukeboxes
+    if any(k in title or k in uploader for k in DISALLOWED_KEYWORDS):
+        return False
+
+    for a in ALLOWED_CHANNELS:
+        if a in u_id or a in uploader or a in channel:
+            return True
+    return False
+
+import re
+
+def clean_song_title(title: str) -> str:
+    cleaned = re.sub(
+        r"\s*[\(\[](?:Official\s*(?:Music\s*)?Video|Full\s*Song|Audio|Lyric\s*Video|Lyrical|4K|8K|HD|Remastered|Official\s*Audio|Dance\s*Mix)[\)\]]",
+        "",
+        title,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"\s*\|\s*.*$", "", cleaned)
+    cleaned = re.sub(r"\s*-\s*(?:T-Series|Zee Music|Sony Music|Saregama).*$", "", cleaned, flags=re.IGNORECASE)
+    return cleaned.strip()
+
 @app.get("/api/search")
 def search_songs(
     q: str = Query(..., min_length=1, description="Search song title or artist"),
-    limit: int = Query(25, ge=1, le=50, description="Max songs to return")
+    limit: int = Query(3, ge=1, le=10, description="Max songs to return")
 ):
     """
-    Search YouTube Music for tracks matching the query.
-    Returns clean JSON compatible with Moonlight Player.
+    Smart search strictly filtered to 4 verified channels:
+    - T-Series (@tseries)
+    - Zee Music Company (@zeemusiccompany)
+    - Saregama Music (@SaregamaMusic)
+    - Sony Music India (@SonyMusicIndia)
+    Returns at most `limit` (default 3) pristine matching tracks.
     """
+    clean_q = q.strip().lower()
+    now = time.time()
+
+    # Fast in-memory cache check
+    cached = search_cache.get(clean_q)
+    if cached and cached.get("expiresAt", 0) > now:
+        return cached["data"]
+
+    ydl_opts = {
+        "quiet": True,
+        "extract_flat": True,
+        "skip_download": True,
+        "no_warnings": True,
+    }
+
     try:
-        results = ytm.search(q, filter="songs", limit=limit)
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            search_res = ydl.extract_info(f"ytsearch20:{q}", download=False)
+            entries = search_res.get("entries", [])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
     songs = []
-    for item in results:
-        video_id = item.get("videoId")
-        if not video_id:
+    seen_titles = set()
+
+    for item in entries:
+        if not item or not item.get("id"):
             continue
 
-        artists = [a.get("name", "") for a in item.get("artists", []) if a.get("name")]
-        artist_str = ", ".join(artists) if artists else "Unknown Artist"
+        if not is_allowed_channel_entry(item):
+            continue
 
-        album_info = item.get("album")
-        album_name = album_info.get("name", "YouTube Music") if album_info else "YouTube Music"
+        title = clean_song_title(item.get("title") or "Unknown Title")
+        title_key = title.lower()
+        if title_key in seen_titles:
+            continue
+        seen_titles.add(title_key)
 
-        duration_sec = item.get("duration_seconds")
-        if not duration_sec:
-            duration_sec = parse_duration(item.get("duration", "0:00"))
+        video_id = item.get("id")
+        duration = item.get("duration") or 0
+        uploader_name = item.get("uploader") or item.get("channel") or "Official Channel"
+
+        # Best thumbnail
+        thumbnails = item.get("thumbnails", [])
+        cover_url = clean_thumbnail(thumbnails) if thumbnails else f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
 
         songs.append({
             "id": video_id,
-            "title": item.get("title", "Unknown Title"),
-            "artist": artist_str,
-            "album": album_name,
-            "duration": duration_sec,
-            "coverUrl": clean_thumbnail(item.get("thumbnails", [])),
+            "title": title,
+            "artist": uploader_name,
+            "album": uploader_name,
+            "duration": duration,
+            "coverUrl": cover_url,
             "source": "youtube"
         })
 
-    return {"query": q, "count": len(songs), "songs": songs}
+        if len(songs) >= limit:
+            break
+
+    response_data = {"query": q, "count": len(songs), "songs": songs}
+
+    # Cache for 1 hour
+    search_cache[clean_q] = {
+        "expiresAt": now + 3600,
+        "data": response_data
+    }
+
+    return response_data
 
 @app.get("/api/stream/{video_id}")
 def get_stream_url(video_id: str):
